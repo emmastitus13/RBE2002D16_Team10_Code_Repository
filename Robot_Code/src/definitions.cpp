@@ -7,8 +7,14 @@
 //Ultrasonic sensor Maximum distance
 #define MAX_DISTANCE 200
 
+//Flame sensor constant
+#define FLAME_SENSOR_CONSTANT 50
+
+//Maximum motor speed
+#define MOTOR_MAX_SPEED 255
+
 //Analog Pins
-#define FLAME_SENSE A0
+#define FLAME_SENSE_PINA A0
 //1
 //2
 //3
@@ -30,12 +36,12 @@
 //Pin declarations
 //0 RX0
 //1 TX0
-#define L_ENCODER_PIN 2//PWM INT0
-#define R_ENCODER_PIN 3//3 PWM INT1
+#define L_ENCODER_PIN 2        // PWM INT0
+#define R_ENCODER_PIN 3        // PWM INT1
 //4 PWM
 //5 PWM
 #define FAN_PIN 6              // PWM
-#define EXTINGUISH_SERVO_PIN 7 // PWM
+#define TILT_SERVO_PIN 7       // PWM
 #define RIGHT_MOTOR_PIN2 8     // PWM
 #define RIGHT_MOTOR_PIN1 9     // PWM
 #define LEFT_MOTOR_PIN2 10     // PWM
@@ -58,7 +64,7 @@
 #define LEFT_US_TP 27
 #define FORWARD_US_TP 28
 #define FORWARD_US_EP 29
-//30
+#define FLAME_SENSE_PIND 30
 //31
 //32
 //33

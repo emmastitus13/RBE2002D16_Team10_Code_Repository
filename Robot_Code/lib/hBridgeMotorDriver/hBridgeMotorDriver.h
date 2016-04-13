@@ -19,27 +19,27 @@
 
 class Type1_Motor {
   public:
-    Type1_Motor(unsigned char en, unsigned char in1, unsigned char in2);
-    void driveForward(unsigned char spd);
-	void driveBackward(unsigned char spd);
+    Type1_Motor(uint8_t en, uint8_t in1, uint8_t in2);
+    void driveForward(uint8_t spd);
+	void driveBackward(uint8_t spd);
 	void drive(int spd);
 	void brake();
 
   private:
-    unsigned char enPin, in1Pin, in2Pin;
+    uint8_t enPin, in1Pin, in2Pin;
 };
 
 
 class Type2_Motor {
   public:
-    Type2_Motor(unsigned char in1, unsigned char in2);
-    void driveForward(unsigned char spd);
-	void driveBackward(unsigned char spd);
+    Type2_Motor(uint8_t in1, uint8_t in2);
+    void driveForward(uint8_t spd);
+	void driveBackward(uint8_t spd);
 	void drive(int spd);
 	void brake();
 
   private:
-    unsigned char in1Pin, in2Pin;
+    uint8_t in1Pin, in2Pin;
 };
 
 
