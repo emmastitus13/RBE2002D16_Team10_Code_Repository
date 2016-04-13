@@ -1,6 +1,17 @@
+/* RBE2002D16 Final Project Code
+ *
+ *
+ *
+ *
+ *
+ *
+ * Created on Apr 12. 2016 by Ben Titus
+ * Last edit made Apr 13, 2016 by Ben Titus
+ */
+
 #include <Arduino.h>
-#include "DriveTrain.h"
 #include "definitions.cpp"
+#include "DriveTrain.h"
 #include "FireExtinguisher.h"
 #include "hBridgeMotorDriver.h"
 #include "NewPing.h"
@@ -18,10 +29,7 @@ NewPing forwardUS(FORWARD_US_TP, FORWARD_US_EP, MAX_DISTANCE);
 DriveTrain robotDrive(LEFT_MOTOR_PIN1, LEFT_MOTOR_PIN2, RIGHT_MOTOR_PIN1, RIGHT_MOTOR_PIN2, MAX_MOTOR_SPEED);
 FireExtinguisher fireExtinguisher(FAN_PIN, FLAME_SENSE_PINA, FLAME_SENSE_PIND, TILT_SERVO_PIN, FLAME_SENSOR_CONSTANT);
 
-NewPing USSensors[3];
-USSensors[0] = leftUS;
-USSensors[1] = forwardUS;
-USSensors[2] = rightUS;
+NewPing USSensors[3] ={leftUS, forwardUS, rightUS};
 
 volatile unsigned char botState = STOP;
 volatile unsigned long lEncode = 0;
@@ -41,12 +49,6 @@ void setup() {
 }
 
 void loop() {
-    delay(50);
-    int uS = leftUS.ping();
-    Serial.print("Ping: ");
-    Serial.print(uS / US_ROUNDTRIP_CM);
-    Serial.println("cm");
-    /*
     leftMotor.driveBackward(255);
     rightMotor.driveForward(255);
     Serial.print("Left Encoder: ");
@@ -55,7 +57,13 @@ void loop() {
     Serial.println((rEncode - currentR) / 500);
     delay(500);
     currentL = lEncode;
-    currentR = rEncode;*/
+    currentR = rEncode;
+        /*
+        delay(50);
+        int uS = leftUS.ping();
+        Serial.print("Ping: ");
+        Serial.print(uS / US_ROUNDTRIP_CM);
+        Serial.println("cm");*/
 
 }
 
@@ -75,7 +83,7 @@ void findAndExtinguishCandle(void) {
         case FIND_CANDLE:
             break;
 
-        case EXTINGUISH_CANDLE:
+        case EXTINGUISH_FIRE:
             break;
 
         case RETURN_HOME:

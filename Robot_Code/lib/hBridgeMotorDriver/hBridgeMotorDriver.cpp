@@ -11,8 +11,13 @@
 
 
 
+Type1_Motor::Type1_Motor() {
+	
+}
+
+
 //en is enable, in1 and in2 are the two sides of the H-Bridge
-Type1_Motor::Type1_Motor(unsigned char en, unsigned char in1, unsigned char in2) {
+Type1_Motor::Type1_Motor(uint8_t en, uint8_t in1, uint8_t in2) {
 	enPin = en;
 	in1Pin = in1;
 	in2Pin = in2;
@@ -22,14 +27,14 @@ Type1_Motor::Type1_Motor(unsigned char en, unsigned char in1, unsigned char in2)
 }
 
 
-void Type1_Motor::driveForward(unsigned char spd) {
+void Type1_Motor::driveForward(uint8_t spd) {
 	digitalWrite(in2Pin, LOW);
 	digitalWrite(in1Pin, HIGH);
 	analogWrite(enPin, spd);
 }
 
 
-void Type1_Motor::driveBackward(unsigned char spd) {
+void Type1_Motor::driveBackward(uint8_t spd) {
 	digitalWrite(in1Pin, LOW);
 	digitalWrite(in2Pin, HIGH);
 	analogWrite(enPin, spd);
@@ -65,14 +70,26 @@ void Type1_Motor::drive(int spd) {
 }
 
 
-void Type1_Motor::brake() {
+void Type1_Motor::brake(void) {
 	digitalWrite(enPin, HIGH);
 	digitalWrite(in1Pin, LOW);
 	digitalWrite(in2Pin, LOW);
 }
 
 
+void Type1_Motor::setPins(uint8_t en, uint8_t in1, uint8_t in2) {
+	enPin = en;
+	in1Pin = in1;
+	in2Pin = in2;
+}
+
+
 /********************************************************************************************************/
+
+
+Type2_Motor::Type2_Motor() {
+
+}
 
 
 //en is enable, in1 and in2 are the two sides of the H-Bridge
@@ -121,7 +138,13 @@ void Type2_Motor::drive(int spd) {
 }
 
 
-void Type2_Motor::brake() {
+void Type2_Motor::brake(void) {
 	digitalWrite(in1Pin, LOW);
 	digitalWrite(in2Pin, LOW);
+}
+
+
+void Type2_Motor::setPins(uint8_t in1, uint8_t in2) {
+	in1Pin = in1;
+	in2Pin = in2;
 }

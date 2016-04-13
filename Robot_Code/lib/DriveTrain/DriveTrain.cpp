@@ -11,7 +11,7 @@
 #include "DriveTrain.h"
 
 
-DriveTrain::DriveTrain(uint8_t lMoto1, uint8_t lMoto2, uint8_t rMoto1, uint8_t rMoto2) {
+DriveTrain::DriveTrain(uint8_t lMoto1, uint8_t lMoto2, uint8_t rMoto1, uint8_t rMoto2, uint8_t maxSPD) {
     lMotorPin1 = lMoto1;
     lMotorPin2 = lMoto2;
     rMotorPin1 = rMoto1;
@@ -19,8 +19,8 @@ DriveTrain::DriveTrain(uint8_t lMoto1, uint8_t lMoto2, uint8_t rMoto1, uint8_t r
     maxSpeed = maxSPD;
 
     //connect the wires backwards on one motor to make them spin the same direction
-    leftMotor(lMotorPin1, lMotorPin2);
-    rightMotor(rMotorPin2, rMotorPin1);
+    leftMotor.setPins(lMotorPin1, lMotorPin2);
+    rightMotor.setPins(rMotorPin2, rMotorPin1);
 }
 
 

@@ -11,7 +11,7 @@
 #define FLAME_SENSOR_CONSTANT 50
 
 //Maximum motor speed
-#define MOTOR_MAX_SPEED 255
+#define MAX_MOTOR_SPEED 255
 
 //Analog Pins
 #define FLAME_SENSE_PINA A0
@@ -52,7 +52,7 @@
 //15 RX3
 //16 TX2
 //17 RX2
-//18 INT5 TX1
+#define FRONT_BUMPER 18// INT5 TX1
 //19 INT4 RX1
 //20 INT3 SDA
 //21 INT2 SCL
