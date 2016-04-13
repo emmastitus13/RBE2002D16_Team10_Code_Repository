@@ -6,7 +6,7 @@
  * FLAME_SENSOR - 1 Analog Input, 1 Digital Input
  *
  * Created on Apr 12, 2016 by Ben Titus
- * Last edit made Apr 12, 2016 by Ben Titus
+ * Last edit made Apr 13, 2016 by Ben Titus
  */
 
 #include "FireExtinguisher.h"
@@ -19,6 +19,13 @@ FireExtinguisher::FireExtinguisher(uint8_t fan, uint8_t flameSenseA, uint8_t fla
     servoPin = servo;
     flameSensorConstant = flameConst;
     tiltServo.attach(servoPin, 1000, 2000);
+}
+
+
+//sets the min and max values for the tilt servo
+void FireExtinguisher::setServo(uint8_t min, uint8_t max) {
+    servoMin = min;
+    servoMax = max;
 }
 
 
@@ -64,4 +71,24 @@ void FireExtinguisher::servoTilt(int tiltTo) {
         tiltTo = 0;
     }
     tiltServo.write(tiltTo);
+}
+
+
+//moves the servo up and down to find the flame
+int FireExtinguisher::findFlame(void) {
+    servoTilt(servoMin); //reset the tilt servo to minimum position
+
+    int pastFlameVal, flameVal;
+    pastFlameVal = 1024; //set the past value to maximum
+    flameVal = readFlameSense(); //get the current flame sensor value
+
+    for (int i = servoMin; i < servoMax; i++) {
+        if (flameVal > pastFlameVal) {
+            return i;
+        } else {
+            pastFlameVal = flameVal;
+            flameVal = readFlameSense();
+            servoTilt(i);
+        }
+    }
 }

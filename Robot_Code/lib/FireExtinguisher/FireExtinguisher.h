@@ -6,7 +6,7 @@
  * FLAME_SENSOR - 1 Analog Input, 1 Digital Input
  *
  * Created on Apr 12. 2016 by Ben Titus
- * Last edit made Apr 12, 2016 by Ben Titus
+ * Last edit made Apr 13, 2016 by Ben Titus
  */
 
 #ifndef FireExtinguish_h
@@ -18,15 +18,17 @@
 class FireExtinguisher {
     public:
         FireExtinguisher(uint8_t fan, uint8_t flameSenseA, uint8_t flameSenseD, uint8_t servo, int flameConst);
+        void setServo(uint8_t min, uint8_t max);
         void extinguishFire(void);
         int readFlameSense(void);
         int readFlameSenseDig(void);
         int getDistance(void);
         void servoTilt(int tiltTo);
+        int findFlame(void);
 
     private:
         uint8_t fanPin, flameSensePinA, flameSensePinD, servoPin;
-        int flameSensorConstant;
+        int servoMax, servoMin, flameSensorConstant, flameVal, pastFlameVal;
         Servo tiltServo;
 };
 
