@@ -11,3 +11,12 @@
 
 
 #include "LCDController.h"
+
+//constructor
+LCDController::LCDController(/*varialbes*/) {
+    //set pins as outputs and private variables
+    //make a LiquidCrystal LCD
+}
+
+
+//

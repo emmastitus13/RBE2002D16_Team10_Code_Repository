@@ -1,4 +1,16 @@
-//defining states
+/* RBE2002D16 Final Project Code Definitions
+ *
+ *
+ *
+ *
+ *
+ *
+ * Created on Apr 12. 2016 by Ben Titus
+ * Last edit made Apr 17, 2016 by Ben Titus
+ */
+
+
+ //defining states
 #define STOP 0
 #define FIND_CANDLE 1
 #define EXTINGUISH_FIRE 2
@@ -36,16 +48,16 @@
 //Pin declarations
 //0 RX0
 //1 TX0
-#define L_ENCODER_PIN 2        // PWM INT0
-#define R_ENCODER_PIN 3        // PWM INT1
+#define R_ENCODER_PIN 2        // PWM INT0
+#define L_ENCODER_PIN 3        // PWM INT1
 //4 PWM
-//5 PWM
+#define LEFT_MOTOR_PIN2 5     // PWM
 #define FAN_PIN 6              // PWM
 #define TILT_SERVO_PIN 7       // PWM
 #define RIGHT_MOTOR_PIN2 8     // PWM
 #define RIGHT_MOTOR_PIN1 9     // PWM
-#define LEFT_MOTOR_PIN2 10     // PWM
-#define LEFT_MOTOR_PIN1 11     // PWM
+#define LEFT_MOTOR_PIN1 10     // PWM
+//11 PWM ***BROKEN***
 //12 PWM
 //13 PWM LED
 //14 TX3

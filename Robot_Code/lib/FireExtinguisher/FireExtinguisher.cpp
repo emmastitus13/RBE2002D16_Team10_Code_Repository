@@ -6,7 +6,7 @@
  * FLAME_SENSOR - 1 Analog Input, 1 Digital Input
  *
  * Created on Apr 12, 2016 by Ben Titus
- * Last edit made Apr 16, 2016 by Ben Titus
+ * Last edit made Apr 17, 2016 by Ben Titus
  */
 
 #include "FireExtinguisher.h"
@@ -23,7 +23,7 @@ FireExtinguisher::FireExtinguisher(uint8_t fan, uint8_t flameSenseA, uint8_t fla
 }
 
 
-//sets the min and max values for the tilt servo
+//sets the min and max values for the tilt servo and attaches the servo
 void FireExtinguisher::setServo(uint8_t min, uint8_t max) {
     tiltServo.attach(servoPin);
     servoMin = min;
@@ -33,12 +33,13 @@ void FireExtinguisher::setServo(uint8_t min, uint8_t max) {
 
 
 //turns on the fan and reads the flame sensor until the flame is extinguished
+//shouldn't run if no flame is sensed
 void FireExtinguisher::extinguishFire(void) {
-    int dist = readFlameSense();
-    if (dist > 600) {
-        digitalWrite(fanPin, LOW);
+    int val = readFlameSense();
+    if (val > 600) {
+        fanOff();
     } else {
-        digitalWrite(fanPin, HIGH);
+        fanOn();
     }
 }
 
@@ -59,19 +60,21 @@ int FireExtinguisher::readFlameSenseDig(void) {
 
 //returns a crude distance to the flame based on the calibration curve of the flame sensor
 //should not be trusted as 100% accurrate
+//could be turned into a "getZ" function later using servoPos and the frontUS sensor
 int FireExtinguisher::getDistance(void) {
     int val = analogRead(flameSensePinA);
     return val / flameSensorConstant;
 }
 
 
-//tilts the servo to an angle, causing the array to tilt up and down
+//tilts the servo to an angle, causing the fan array to tilt up and down
+//won't write higher or lower than the max/min values of the servo
 void FireExtinguisher::servoTilt(int tiltTo) {
-    if (tiltTo > 255) {
-        tiltTo = 255;
+    if (tiltTo > servoMax) {
+        tiltTo = servoMax;
     }
-    if (tiltTo < 0) {
-        tiltTo = 0;
+    if (tiltTo < servoMin) {
+        tiltTo = servoMin;
     }
     tiltServo.write(tiltTo);
     servoPos = tiltTo;
@@ -100,7 +103,9 @@ int FireExtinguisher::findFlame(void) {
 
 //turns on the fan
 void FireExtinguisher::fanOn(void) {
-    if (servoPos < 10) {} else {
+    if (servoPos < servoMin) {
+        //this breaks the fans
+    } else {
         digitalWrite(fanPin, HIGH);
     }
 }
