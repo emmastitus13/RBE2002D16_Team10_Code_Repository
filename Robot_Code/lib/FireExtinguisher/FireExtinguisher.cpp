@@ -6,11 +6,11 @@
  * FLAME_SENSOR - 1 Analog Input, 1 Digital Input
  *
  * Created on Apr 12, 2016 by Ben Titus
- * Last edit made Apr 13, 2016 by Ben Titus
+ * Last edit made Apr 16, 2016 by Ben Titus
  */
 
 #include "FireExtinguisher.h"
-#include "Servo.h"
+#include <Servo.h>
 
 FireExtinguisher::FireExtinguisher(uint8_t fan, uint8_t flameSenseA, uint8_t flameSenseD, uint8_t servo, int flameConst) {
     fanPin = fan;
@@ -18,14 +18,17 @@ FireExtinguisher::FireExtinguisher(uint8_t fan, uint8_t flameSenseA, uint8_t fla
     flameSensePinD = flameSenseD;
     servoPin = servo;
     flameSensorConstant = flameConst;
-    tiltServo.attach(servoPin, 1000, 2000);
+    Servo myServo;
+    tiltServo = myServo;
 }
 
 
 //sets the min and max values for the tilt servo
 void FireExtinguisher::setServo(uint8_t min, uint8_t max) {
+    tiltServo.attach(servoPin);
     servoMin = min;
     servoMax = max;
+    servoPos = 0;
 }
 
 
@@ -71,6 +74,7 @@ void FireExtinguisher::servoTilt(int tiltTo) {
         tiltTo = 0;
     }
     tiltServo.write(tiltTo);
+    servoPos = tiltTo;
 }
 
 
@@ -91,4 +95,18 @@ int FireExtinguisher::findFlame(void) {
             servoTilt(i);
         }
     }
+}
+
+
+//turns on the fan
+void FireExtinguisher::fanOn(void) {
+    if (servoPos < 10) {} else {
+        digitalWrite(fanPin, HIGH);
+    }
+}
+
+
+//turns off the fan
+void FireExtinguisher::fanOff(void) {
+    digitalWrite(fanPin, LOW);
 }

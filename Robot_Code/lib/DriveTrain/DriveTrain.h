@@ -23,6 +23,7 @@ public:
     void botTurnRight(uint8_t spd);
     void botDrive(int lspd, int rspd);
     void botStop(void);
+    void attachMotors(void);
 
 private:
     uint8_t lMotorPin1, lMotorPin2, rMotorPin1, rMotorPin2, maxSpeed;

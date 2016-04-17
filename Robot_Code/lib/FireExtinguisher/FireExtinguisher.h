@@ -6,14 +6,14 @@
  * FLAME_SENSOR - 1 Analog Input, 1 Digital Input
  *
  * Created on Apr 12. 2016 by Ben Titus
- * Last edit made Apr 13, 2016 by Ben Titus
+ * Last edit made Apr 16, 2016 by Ben Titus
  */
 
 #ifndef FireExtinguish_h
 #define FireExtinguish_h
 
 #include <Arduino.h>
-#include "Servo.h"
+#include <Servo.h>
 
 class FireExtinguisher {
     public:
@@ -25,10 +25,13 @@ class FireExtinguisher {
         int getDistance(void);
         void servoTilt(int tiltTo);
         int findFlame(void);
+        void fanOn(void);
+        void fanOff(void);
+        uint8_t servoPos, servoMin, servoMax;
 
     private:
         uint8_t fanPin, flameSensePinA, flameSensePinD, servoPin;
-        int servoMax, servoMin, flameSensorConstant, flameVal, pastFlameVal;
+        int flameSensorConstant, flameVal, pastFlameVal;
         Servo tiltServo;
 };
 
