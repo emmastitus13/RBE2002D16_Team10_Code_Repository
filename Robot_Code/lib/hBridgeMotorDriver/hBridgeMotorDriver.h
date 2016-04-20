@@ -7,8 +7,9 @@
  * Type2
  * in1Pin - PWM Pin
  * in2Pin - PWM Pin
+ *
  * Created by Ben Titus, April 5, 2016
- * Last edit made by Ben Titus, April 11, 2016
+ * Last edit made by Ben Titus, April 17, 2016
  */
 
 
@@ -18,28 +19,32 @@
 #include <Arduino.h>
 
 class Type1_Motor {
-  public:
-    Type1_Motor(unsigned char en, unsigned char in1, unsigned char in2);
-    void driveForward(unsigned char spd);
-	void driveBackward(unsigned char spd);
-	void drive(int spd);
-	void brake();
+public:
+    Type1_Motor(); //general constructor
+    Type1_Motor(uint8_t en, uint8_t in1, uint8_t in2); //specific constructor
+    void driveForward(uint8_t spd); //drives the motor forward
+    void driveBackward(uint8_t spd); //drives the motor backward
+    void drive(int spd); //drives the motor forward or backward
+    void brake(void); //stops the motor
+    void setPins(uint8_t en, uint8_t in1, uint8_t in2); //initializes the motor
 
-  private:
-    unsigned char enPin, in1Pin, in2Pin;
+private:
+    uint8_t enPin, in1Pin, in2Pin; //pins for the motor
 };
 
 
 class Type2_Motor {
-  public:
-    Type2_Motor(unsigned char in1, unsigned char in2);
-    void driveForward(unsigned char spd);
-	void driveBackward(unsigned char spd);
-	void drive(int spd);
-	void brake();
+public:
+    Type2_Motor(); //general constructor
+    Type2_Motor(uint8_t in1, uint8_t in2); //specific constructor
+    void driveForward(uint8_t spd); //drives the motor forward
+    void driveBackward(uint8_t spd); //drives the motor backward
+    void drive(int spd); //drives the motor forward or backward
+    void brake(void); //stops the motor
+    void setPins(uint8_t in1, uint8_t in2); //initializes the motor
 
-  private:
-    unsigned char in1Pin, in2Pin;
+private:
+    uint8_t in1Pin, in2Pin;
 };
 
 

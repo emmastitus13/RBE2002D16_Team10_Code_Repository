@@ -1,4 +1,16 @@
-//defining states
+/* RBE2002D16 Final Project Code Definitions
+ *
+ *
+ *
+ *
+ *
+ *
+ * Created on Apr 12. 2016 by Ben Titus
+ * Last edit made Apr 17, 2016 by Ben Titus
+ */
+
+
+ //defining states
 #define STOP 0
 #define FIND_CANDLE 1
 #define EXTINGUISH_FIRE 2
@@ -7,8 +19,14 @@
 //Ultrasonic sensor Maximum distance
 #define MAX_DISTANCE 200
 
+//Flame sensor constant
+#define FLAME_SENSOR_CONSTANT 50
+
+//Maximum motor speed
+#define MAX_MOTOR_SPEED 255
+
 //Analog Pins
-#define FLAME_SENSE A0
+//0
 //1
 //2
 //3
@@ -19,7 +37,7 @@
 //8
 //9
 //10
-//11
+#define FLAME_SENSE_PINA A11
 //12
 //13
 //14
@@ -30,23 +48,23 @@
 //Pin declarations
 //0 RX0
 //1 TX0
-#define L_ENCODER_PIN 2//PWM INT0
-#define R_ENCODER_PIN 3//3 PWM INT1
+#define R_ENCODER_PIN 2        // PWM INT0
+#define L_ENCODER_PIN 3        // PWM INT1
 //4 PWM
-//5 PWM
+#define LEFT_MOTOR_PIN2 5     // PWM
 #define FAN_PIN 6              // PWM
-#define EXTINGUISH_SERVO_PIN 7 // PWM
+#define TILT_SERVO_PIN 7       // PWM
 #define RIGHT_MOTOR_PIN2 8     // PWM
 #define RIGHT_MOTOR_PIN1 9     // PWM
-#define LEFT_MOTOR_PIN2 10     // PWM
-#define LEFT_MOTOR_PIN1 11     // PWM
+#define LEFT_MOTOR_PIN1 10     // PWM
+//11 PWM ***BROKEN***
 //12 PWM
 //13 PWM LED
 //14 TX3
 //15 RX3
 //16 TX2
 //17 RX2
-//18 INT5 TX1
+#define FRONT_BUMPER 18        // INT5 TX1
 //19 INT4 RX1
 //20 INT3 SDA
 //21 INT2 SCL
@@ -58,7 +76,7 @@
 #define LEFT_US_TP 27
 #define FORWARD_US_TP 28
 #define FORWARD_US_EP 29
-//30
+#define FLAME_SENSE_PIND 30
 //31
 //32
 //33
