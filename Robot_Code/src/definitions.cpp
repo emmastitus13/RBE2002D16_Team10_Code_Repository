@@ -6,7 +6,7 @@
  *
  *
  * Created on Apr 12. 2016 by Ben Titus
- * Last edit made Apr 17, 2016 by Ben Titus
+ * Last edit made Apr 20, 2016 by Ben Titus
  */
 
 
@@ -72,8 +72,8 @@
 //23
 //24
 //25
-#define LEFT_US_EP 26
-#define LEFT_US_TP 27
+#define LEFT_US_EP 27
+#define LEFT_US_TP 26
 #define FORWARD_US_TP 28
 #define FORWARD_US_EP 29
 #define FLAME_SENSE_PIND 30
@@ -86,12 +86,12 @@
 //37
 //38
 //39
-//40
-//41
-//42
-//43
-//44 PWM
-//45 PWM
+#define RS_PIN 40
+#define EN_PIN 41
+#define DB1_PIN 42
+#define DB2_PIN 43
+#define DB3_PIN 44
+#define DB4_PIN 45
 //46 PWM
 //47
 //48

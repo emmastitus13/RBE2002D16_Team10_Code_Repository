@@ -96,6 +96,7 @@ int FireExtinguisher::findFlame(void) {
             pastFlameVal = flameVal;
             flameVal = readFlameSense();
             servoTilt(i);
+            return servoPos;
         }
     }
 }
