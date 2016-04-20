@@ -49,7 +49,7 @@
 //0 RX0
 //1 TX0
 #define R_ENCODER_PIN 2        // PWM INT0
-#define L_ENCODER_PIN 3        // PWM INT1
+//3 PWM INT1
 //4 PWM
 #define LEFT_MOTOR_PIN2 5     // PWM
 #define FAN_PIN 6              // PWM
@@ -64,8 +64,8 @@
 //15 RX3
 //16 TX2
 //17 RX2
-#define FRONT_BUMPER 18        // INT5 TX1
-//19 INT4 RX1
+#define L_ENCODER_PIN 18        // INT5 TX1
+#define FRONT_BUMPER 19         // INT4 RX1
 //20 INT3 SDA
 //21 INT2 SCL
 //22

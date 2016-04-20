@@ -29,6 +29,7 @@ void lEncoderISR(void);
 void rEncoderISR(void);
 void timer1ISR(void);
 void frontBumpISR(void);
+void oneMovement(void);
 
 
 NewPing leftUS(LEFT_US_TP, LEFT_US_EP, MAX_DISTANCE);
@@ -52,6 +53,7 @@ int pastlEnc = 0, pastrEnc = 0;
 uint8_t baseDrive = 255;
 uint8_t driveL = baseDrive;
 uint8_t driveR = baseDrive;
+int encTicksPerWheelRev = 3575;
 
 NewPing USSensors[3] ={leftUS, frontUS, rightUS};
 unsigned long USVals[3] = {lUSVal, rUSVal, frUSVal};
@@ -67,8 +69,8 @@ void setup() {
     pinMode(R_ENCODER_PIN, INPUT_PULLUP);
     pinMode(FRONT_BUMPER, INPUT_PULLUP);
 
-    attachInterrupt(digitalPinToInterrupt(L_ENCODER_PIN), lEncoderISR, FALLING);
-    attachInterrupt(digitalPinToInterrupt(R_ENCODER_PIN), rEncoderISR, FALLING);
+    attachInterrupt(digitalPinToInterrupt(L_ENCODER_PIN), lEncoderISR, CHANGE);
+    attachInterrupt(digitalPinToInterrupt(R_ENCODER_PIN), rEncoderISR, CHANGE);
     attachInterrupt(digitalPinToInterrupt(FRONT_BUMPER), frontBumpISR, FALLING);
 
     fireExtinguisher.setServo(30, 120);
@@ -86,40 +88,51 @@ void setup() {
 
 /*************************************************************************************************************************/
 void loop() {
-    if ((timer1cnt % 50) / 2) {
-        readAllUS();
-
-        if ((USVals[0] < 10) && (USVals[0] > 0)) {
-            driveL++;
-        }
-
-        if ((USVals[1] < 10) && (USVals[1] > 0)) {
-            driveR++;
-        }
-
-        if ((USVals[2] < 10) && (USVals[2] > 0)) {
-            if (USVals[0] > USVals[1]) {
-                if ((USVals[1] < 10) && (USVals[1] > 0)) {
-
-                } else {
-                    robotDrive.botTurnLeft();
-                }
-            }
-        }
-    }
-
-
-    if (timer >= 500) {
-        timer = 0;
-        Serial.print("Left US: ");
-        Serial.print(USVals[0]);
-        Serial.print(" Right US: ");
-        Serial.print(USVals[1]);
-        Serial.print(" Front US: ");
-        Serial.println(USVals[2]);
-    }
-    timer = timer1cnt;
-}
+  oneMovement();
+  // Serial.print("Begin");
+  // Serial.print(" ");
+  // delay(500);
+  // Serial.print("End");
+  // Serial.print(" ");
+  // fireExtinguisher.findFlame();
+  // delay(500);
+  // fireExtinguisher.extinguishFire();
+  // Serial.println("Stop");
+  // delay(100000);
+//     if ((timer1cnt % 50) / 2) {
+//         readAllUS();
+//
+//         if ((USVals[0] < 10) && (USVals[0] > 0)) {
+//             driveL++;
+//         }
+//
+//         if ((USVals[1] < 10) && (USVals[1] > 0)) {
+//             driveR++;
+//         }
+//
+//         if ((USVals[2] < 10) && (USVals[2] > 0)) {
+//             if (USVals[0] > USVals[1]) {
+//                 if ((USVals[1] < 10) && (USVals[1] > 0)) {
+//
+//                 } else {
+//                     robotDrive.botTurnLeft();
+//                 }
+//             }
+//         }
+//     }
+//
+//
+//     if (timer >= 500) {
+//         timer = 0;
+//         Serial.print("Left US: ");
+//         Serial.print(USVals[0]);
+//         Serial.print(" Right US: ");
+//         Serial.print(USVals[1]);
+//         Serial.print(" Front US: ");
+//         Serial.println(USVals[2]);
+//     }
+//     timer = timer1cnt;
+ }
 
 /*************************************************************************************************************************/
 //ISR for the 10ms timer
@@ -230,6 +243,17 @@ void driveStraight() {
             driveR = baseDrive;
         }
     }
+}
+
+void oneMovement(){
+  Serial.print(lEncode);
+  Serial.print(" ");
+  Serial.println(rEncode);
+  if((lEncode >= encTicksPerWheelRev) || (rEncode >= encTicksPerWheelRev)){
+    robotDrive.botStop();
+  } else {
+    driveStraight();
+  }
 }
 
 //returns the distance of a movement

@@ -36,11 +36,12 @@ void FireExtinguisher::setServo(uint8_t min, uint8_t max) {
 //shouldn't run if no flame is sensed
 void FireExtinguisher::extinguishFire(void) {
     int val = readFlameSense();
-    if (val > 600) {
-        fanOff();
-    } else {
+    while (val < 950) {
         fanOn();
+        //delay(2000);
+        val = readFlameSense();
     }
+    fanOff();
 }
 
 
@@ -85,19 +86,27 @@ void FireExtinguisher::servoTilt(int tiltTo) {
 int FireExtinguisher::findFlame(void) {
     servoTilt(servoMin); //reset the tilt servo to minimum position
 
+    int tolerance = 40;
     int pastFlameVal, flameVal;
     pastFlameVal = 1024; //set the past value to maximum
     flameVal = readFlameSense(); //get the current flame sensor value
 
-    for (int i = servoMin; i < servoMax; i++) {
-        if (flameVal > pastFlameVal) {
+    for (int i = servoMax; i > servoMin; i--) {
+      Serial.print(flameVal);
+      Serial.print(" ");
+      Serial.print(pastFlameVal);
+      Serial.print(" ");
+      Serial.println(i);
+        if (flameVal < tolerance) {
+          Serial.println("Sup");
             return i;
         } else {
             pastFlameVal = flameVal;
-            flameVal = readFlameSense();
             servoTilt(i);
-            return servoPos;
+            flameVal = readFlameSense();
+            Serial.println("Dawg");
         }
+        delay(100);
     }
 }
 
