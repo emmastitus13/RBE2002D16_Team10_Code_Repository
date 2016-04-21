@@ -18,6 +18,7 @@
 #include "FireExtinguisher.h"
 #include "hBridgeMotorDriver.h"
 #include "NewPing.h"
+#include "DebugLED.h"
 
 bool test = true;
 
@@ -30,6 +31,7 @@ void rEncoderISR(void);
 void timer1ISR(void);
 void frontBumpISR(void);
 void oneMovement(void);
+void driveStraight(void);
 
 
 NewPing leftUS(LEFT_US_TP, LEFT_US_EP, MAX_DISTANCE);
@@ -38,12 +40,14 @@ NewPing frontUS(FORWARD_US_TP, FORWARD_US_EP, MAX_DISTANCE);
 DriveTrain robotDrive(LEFT_MOTOR_PIN1, LEFT_MOTOR_PIN2, RIGHT_MOTOR_PIN1, RIGHT_MOTOR_PIN2, MAX_MOTOR_SPEED);
 FireExtinguisher fireExtinguisher(FAN_PIN, FLAME_SENSE_PINA, FLAME_SENSE_PIND, TILT_SERVO_PIN, FLAME_SENSOR_CONSTANT);
 LiquidCrystal LCD(RS_PIN, EN_PIN, DB1_PIN, DB2_PIN, DB3_PIN, DB4_PIN);
+DebugLED orange(ORANGE_LED_PIN);
+DebugLED blue(BLUE_LED_PIN);
 
 volatile unsigned char botState = STOP;
 volatile unsigned long lEncode = 0;
 volatile unsigned long rEncode = 0;
 volatile unsigned int timer1cnt = 0;
-unsigned int timer = 0;
+volatile unsigned int timer = 0;
 unsigned long currentL = 0, currentR = 0;
 unsigned long lUSVal, rUSVal, frUSVal;
 int servoMaximum, servoMinimum, servoPosition;
@@ -88,7 +92,7 @@ void setup() {
 
 /*************************************************************************************************************************/
 void loop() {
-  oneMovement();
+  // oneMovement();
   // Serial.print("Begin");
   // Serial.print(" ");
   // delay(500);
@@ -99,39 +103,48 @@ void loop() {
   // fireExtinguisher.extinguishFire();
   // Serial.println("Stop");
   // delay(100000);
-//     if ((timer1cnt % 50) / 2) {
-//         readAllUS();
-//
-//         if ((USVals[0] < 10) && (USVals[0] > 0)) {
-//             driveL++;
-//         }
-//
-//         if ((USVals[1] < 10) && (USVals[1] > 0)) {
-//             driveR++;
-//         }
-//
-//         if ((USVals[2] < 10) && (USVals[2] > 0)) {
-//             if (USVals[0] > USVals[1]) {
-//                 if ((USVals[1] < 10) && (USVals[1] > 0)) {
-//
-//                 } else {
-//                     robotDrive.botTurnLeft();
-//                 }
-//             }
-//         }
-//     }
-//
-//
-//     if (timer >= 500) {
-//         timer = 0;
-//         Serial.print("Left US: ");
-//         Serial.print(USVals[0]);
-//         Serial.print(" Right US: ");
-//         Serial.print(USVals[1]);
-//         Serial.print(" Front US: ");
-//         Serial.println(USVals[2]);
-//     }
-//     timer = timer1cnt;
+
+
+    //This needs to become a state machine :(
+    driveStraight();
+    readAllUS();
+    if ((USVals[0] < 10) && (USVals[0] > 0)) { //if a left wall is near
+        //Serial.println("DriveLeft++");
+        driveR--;
+    }
+
+    if ((USVals[1] < 10) && (USVals[1] > 0)) { //if a right wall is near
+        //Serial.println("DriveRight++");
+        driveL--;
+    }
+
+    if ((USVals[2] < 10) && (USVals[2] > 0)) { //if a wall in front
+        if ((USVals[0] > USVals[1]) && (USVals[1] > 0)) { //if a left wall is nearer than a right wall
+                orange.debugLEDON();
+                //Serial.println("LEFT");
+                robotDrive.botStop();
+                robotDrive.botTurnLeft();
+        } else { //if a right wall is nearer than a left wall or no wall is nearer
+                blue.debugLEDON();
+                //Serial.println("RIGHT");
+                robotDrive.botStop();
+                robotDrive.botTurnLeft();
+        }
+    }
+
+    //Serial.println(frontUS.ping_in());
+    blue.debugLEDOFF();
+    orange.debugLEDOFF();
+    // if (timer >= 500) {
+    //     timer = 0;
+    //     Serial.print("Left US: ");
+    //     Serial.print(USVals[0]);
+    //     Serial.print(" Right US: ");
+    //     Serial.print(USVals[1]);
+    //     Serial.print(" Front US: ");
+    //     Serial.println(USVals[2]);
+    // }
+    // timer = timer1cnt;
  }
 
 /*************************************************************************************************************************/
@@ -206,13 +219,13 @@ unsigned long readUS(NewPing us) {
 //reads all three US sensors
 void readAllUS(void) {
         USVals[0] = leftUS.ping_cm();
-        delay(15);
+        delay(25);
 
         USVals[1] = rightUS.ping_cm();
-        delay(15);
+        delay(25);
 
         USVals[2] = frontUS.ping_cm();
-        delay(15);
+        delay(25);
 }
 
 

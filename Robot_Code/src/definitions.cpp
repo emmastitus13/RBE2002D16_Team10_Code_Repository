@@ -10,6 +10,13 @@
  */
 
 
+//movement struct
+//holds the number of encoder ticks and the angle
+typedef struct {
+    int encoderTicks;
+    float angle;
+} Movement;
+
  //defining states
 #define STOP 0
 #define FIND_CANDLE 1
@@ -51,21 +58,21 @@
 #define R_ENCODER_PIN 2        // PWM INT0
 //3 PWM INT1
 //4 PWM
-#define LEFT_MOTOR_PIN2 5     // PWM
+#define LEFT_MOTOR_PIN2 5      // PWM
 #define FAN_PIN 6              // PWM
 #define TILT_SERVO_PIN 7       // PWM
 #define RIGHT_MOTOR_PIN2 8     // PWM
 #define RIGHT_MOTOR_PIN1 9     // PWM
 #define LEFT_MOTOR_PIN1 10     // PWM
 //11 PWM ***BROKEN***
-//12 PWM
-//13 PWM LED
+#define ORANGE_LED_PIN 12       // PWM
+#define BLUE_LED_PIN 13         // PWM LED
 //14 TX3
 //15 RX3
 //16 TX2
 //17 RX2
-#define L_ENCODER_PIN 18        // INT5 TX1
-#define FRONT_BUMPER 19         // INT4 RX1
+#define L_ENCODER_PIN 18       // INT5 TX1
+#define FRONT_BUMPER 19        // INT4 RX1
 //20 INT3 SDA
 //21 INT2 SCL
 //22
