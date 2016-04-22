@@ -6,13 +6,15 @@
  *
  *
  * Created on Apr 12. 2016 by Ben Titus
- * Last edit made Apr 20, 2016 by Ben Titus
+ * Last edit made Apr 22, 2016 by Ben Titus
  */
 
+#include <Arduino.h>
 
 //movement struct
 //holds the number of encoder ticks and the angle
 typedef struct {
+    uint8_t index;
     int encoderTicks;
     float angle;
 } Movement;
@@ -22,6 +24,14 @@ typedef struct {
 #define FIND_CANDLE 1
 #define EXTINGUISH_FIRE 2
 #define RETURN_HOME 3
+
+//defining wall avoidance states
+#define TEST 0                   //reads the sensors and determines where the walls are
+#define TURN_RIGHT 1             //turns right 90 degrees
+#define TURN_LEFT 2              //turns left 90 degrees
+#define FORWARD 3                //drives forward 1 wheel rotation
+#define WALL_LEFT 4              //slows the right side of the robot
+#define WALL_RIGHT 5             //slows the left side of the robot
 
 //Ultrasonic sensor Maximum distance
 #define MAX_DISTANCE 200

@@ -1,12 +1,12 @@
 /* RBE2002D16 Final Project Code
  *
  * Will not wall follow since the flame sensor cannot rotate independently of the robot
- * Will find the candle by exploratory methods
+ * Will find the candle by exploratory methods :D
  *
  *
  *
  * Created on Apr 12. 2016 by Ben Titus
- * Last edit made Apr 20, 2016 by Ben Titus
+ * Last edit made Apr 22, 2016 by Ben Titus
  */
 
 #include <Arduino.h>
@@ -22,7 +22,7 @@
 
 bool test = true;
 
-void logMove();
+void logMove(void);
 unsigned long readUS(NewPing us);
 void readAllUS(void);
 void findAndExtinguishCandle(void);
@@ -30,8 +30,12 @@ void lEncoderISR(void);
 void rEncoderISR(void);
 void timer1ISR(void);
 void frontBumpISR(void);
-void oneMovement(void);
+void oneRotato(void);
 void driveStraight(void);
+uint8_t testWalls(void);
+void wallNav(void);
+void turnLeft90(void);
+void turnRight90(void);
 
 
 NewPing leftUS(LEFT_US_TP, LEFT_US_EP, MAX_DISTANCE);
@@ -43,6 +47,8 @@ LiquidCrystal LCD(RS_PIN, EN_PIN, DB1_PIN, DB2_PIN, DB3_PIN, DB4_PIN);
 DebugLED orange(ORANGE_LED_PIN);
 DebugLED blue(BLUE_LED_PIN);
 
+const int fullEncTicksPerWheelRev = 3575;
+const int encTicksPerWheelRev = 1788;
 volatile unsigned char botState = STOP;
 volatile unsigned long lEncode = 0;
 volatile unsigned long rEncode = 0;
@@ -57,14 +63,17 @@ int pastlEnc = 0, pastrEnc = 0;
 uint8_t baseDrive = 255;
 uint8_t driveL = baseDrive;
 uint8_t driveR = baseDrive;
-int encTicksPerWheelRev = 3575;
+Movement movBuf;
 
 NewPing USSensors[3] ={leftUS, frontUS, rightUS};
 unsigned long USVals[3] = {lUSVal, rUSVal, frUSVal};
+Movement movements[64];
 
 /*************************************************************************************************************************/
 void setup() {
-    Serial.begin(115200);
+    if (test) {
+        Serial.begin(115200);
+    }
 
     Timer1.initialize(1000); //10ms timer to time some things. open to changes
     Timer1.attachInterrupt(timer1ISR);
@@ -92,59 +101,8 @@ void setup() {
 
 /*************************************************************************************************************************/
 void loop() {
-  // oneMovement();
-  // Serial.print("Begin");
-  // Serial.print(" ");
-  // delay(500);
-  // Serial.print("End");
-  // Serial.print(" ");
-  // fireExtinguisher.findFlame();
-  // delay(500);
-  // fireExtinguisher.extinguishFire();
-  // Serial.println("Stop");
-  // delay(100000);
-
-
-    //This needs to become a state machine :(
-    driveStraight();
-    readAllUS();
-    if ((USVals[0] < 10) && (USVals[0] > 0)) { //if a left wall is near
-        //Serial.println("DriveLeft++");
-        driveR--;
-    }
-
-    if ((USVals[1] < 10) && (USVals[1] > 0)) { //if a right wall is near
-        //Serial.println("DriveRight++");
-        driveL--;
-    }
-
-    if ((USVals[2] < 10) && (USVals[2] > 0)) { //if a wall in front
-        if ((USVals[0] > USVals[1]) && (USVals[1] > 0)) { //if a left wall is nearer than a right wall
-                orange.debugLEDON();
-                //Serial.println("LEFT");
-                robotDrive.botStop();
-                robotDrive.botTurnLeft();
-        } else { //if a right wall is nearer than a left wall or no wall is nearer
-                blue.debugLEDON();
-                //Serial.println("RIGHT");
-                robotDrive.botStop();
-                robotDrive.botTurnLeft();
-        }
-    }
-
-    //Serial.println(frontUS.ping_in());
-    blue.debugLEDOFF();
-    orange.debugLEDOFF();
-    // if (timer >= 500) {
-    //     timer = 0;
-    //     Serial.print("Left US: ");
-    //     Serial.print(USVals[0]);
-    //     Serial.print(" Right US: ");
-    //     Serial.print(USVals[1]);
-    //     Serial.print(" Front US: ");
-    //     Serial.println(USVals[2]);
-    // }
-    // timer = timer1cnt;
+    testWalls();
+    wallNav(); //currently blocking :(
  }
 
 /*************************************************************************************************************************/
@@ -206,7 +164,8 @@ void updatePosition(int newX, int newY, int newZ) {
 //movement consists of an angle, a number of ticks
 //movements recorded in array of movements
 void logMove() {
-
+    movements[globi] = movBuf;
+    globi++;
 }
 
 
@@ -258,15 +217,78 @@ void driveStraight() {
     }
 }
 
-void oneMovement(){
-  Serial.print(lEncode);
-  Serial.print(" ");
-  Serial.println(rEncode);
-  if((lEncode >= encTicksPerWheelRev) || (rEncode >= encTicksPerWheelRev)){
-    robotDrive.botStop();
-  } else {
-    driveStraight();
-  }
+void oneRotato(){
+    if (test) {
+        Serial.print(lEncode);
+        Serial.print(" ");
+        Serial.println(rEncode);
+    }
+
+    if((lEncode >= encTicksPerWheelRev) || (rEncode >= encTicksPerWheelRev)){
+      robotDrive.botStop();
+    } else {
+      driveStraight();
+    }
+}
+
+//determines where a wall is, if there is a wall
+uint8_t testWalls() {
+    readAllUS();
+    if ((USVals[2] < 10) && (USVals[2] > 0)) { //if a wall in front
+        if ((USVals[0] > USVals[1]) && (USVals[1] > 0)) { //if a left wall is nearer than a right wall
+                if (test) {
+                    orange.debugLEDON();
+                    Serial.println("LEFT");
+                }
+                return TURN_RIGHT;
+        } else { //if a right wall is nearer than a left wall or no wall is nearer
+                if (test) {
+                    blue.debugLEDON();
+                    Serial.println("RIGHT");
+                }
+                return TURN_LEFT;
+        }
+    }
+
+    if ((USVals[0] < 10) && (USVals[0] > 0)) { //if a left wall is near
+        //Serial.println("DriveLeft++");
+        return WALL_LEFT;
+    }
+
+    if ((USVals[1] < 10) && (USVals[1] > 0)) { //if a right wall is near
+        //Serial.println("DriveRight++");
+        return WALL_RIGHT;
+    }
+
+    if ((USVals[0] > 10) || (USVals[1] > 10)) {
+        return FORWARD;
+    }
+
+    blue.debugLEDOFF();
+    orange.debugLEDOFF();
+}
+
+void wallNav() {
+    switch(wallState) {
+        case TEST:
+            testWalls();
+            break;
+
+        case TURN_RIGHT:
+            turnRight90();
+            wallState = TEST;
+            break;
+
+        case TURN_LEFT:
+            turnLeft90();
+            wallState = TEST;
+            break;
+
+        case FORWARD:
+            oneRotato();
+            break;
+
+    }
 }
 
 //returns the distance of a movement
