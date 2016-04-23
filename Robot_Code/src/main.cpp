@@ -13,7 +13,10 @@
 #include <Servo.h>
 #include "LiquidCrystal.h"
 #include "TimerOne.h"
+#include <Wire.h>
+#include "L3G.h"
 #include "definitions.cpp"
+#include "gyro.cpp"
 #include "DriveTrain.h"
 #include "FireExtinguisher.h"
 #include "hBridgeMotorDriver.h"
