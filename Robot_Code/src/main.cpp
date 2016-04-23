@@ -101,7 +101,7 @@ void setup() {
 
 /*************************************************************************************************************************/
 void loop() {
-    testWalls();
+    testWalls(); //searches for a wall
     wallNav(); //currently blocking :(
  }
 
