@@ -50,7 +50,7 @@ unsigned int L3G::getTimeout()
 bool L3G::init(deviceType device, sa0State sa0)
 {
   int id;
-  
+
   // perform auto-detection unless device type and SA0 state were both specified
   if (device == device_auto || sa0 == sa0_auto)
   {
@@ -60,7 +60,7 @@ bool L3G::init(deviceType device, sa0State sa0)
       // check SA0 high address unless SA0 was specified to be low
       if (sa0 != sa0_low && (id = testReg(D20_SA0_HIGH_ADDRESS, WHO_AM_I)) != TEST_REG_ERROR)
       {
-        // device responds to address 1101011; it's a D20H or D20 with SA0 high     
+        // device responds to address 1101011; it's a D20H or D20 with SA0 high
         sa0 = sa0_high;
         if (device == device_auto)
         {
@@ -71,7 +71,7 @@ bool L3G::init(deviceType device, sa0State sa0)
       // check SA0 low address unless SA0 was specified to be high
       else if (sa0 != sa0_high && (id = testReg(D20_SA0_LOW_ADDRESS, WHO_AM_I)) != TEST_REG_ERROR)
       {
-        // device responds to address 1101010; it's a D20H or D20 with SA0 low      
+        // device responds to address 1101010; it's a D20H or D20 with SA0 low
         sa0 = sa0_low;
         if (device == device_auto)
         {
@@ -80,7 +80,7 @@ bool L3G::init(deviceType device, sa0State sa0)
         }
       }
     }
-    
+
     // check for L3G4200D if device is still unidentified or was specified to be this type
     if (device == device_auto || device == device_4200D)
     {
@@ -97,14 +97,14 @@ bool L3G::init(deviceType device, sa0State sa0)
         sa0 = sa0_low;
       }
     }
-    
+
     // make sure device and SA0 were successfully detected; otherwise, indicate failure
     if (device == device_auto || sa0 == sa0_auto)
     {
       return false;
     }
   }
-  
+
   _device = device;
 
   // set device address
@@ -119,7 +119,7 @@ bool L3G::init(deviceType device, sa0State sa0)
       address = (sa0 == sa0_high) ? L3G4200D_SA0_HIGH_ADDRESS : L3G4200D_SA0_LOW_ADDRESS;
       break;
   }
-  
+
   return true;
 }
 
@@ -140,11 +140,11 @@ void L3G::enableDefault(void)
     // Low_ODR = 0 (low speed ODR disabled)
     writeReg(LOW_ODR, 0x00);
   }
-  
+
   // 0x00 = 0b00000000
   // FS = 00 (+/- 250 dps full scale)
   writeReg(CTRL_REG4, 0x00);
-  
+
   // 0x6F = 0b01101111
   // DR = 01 (200 Hz ODR); BW = 10 (50 Hz bandwidth); PD = 1 (normal mode); Zen = Yen = Xen = 1 (all axes enabled)
   writeReg(CTRL_REG1, 0x6F);
@@ -183,7 +183,7 @@ void L3G::read()
   Wire.write(OUT_X_L | (1 << 7));
   Wire.endTransmission();
   Wire.requestFrom(address, (byte)6);
-  
+
   unsigned int millis_start = millis();
   while (Wire.available() < 6)
   {

@@ -6,7 +6,7 @@
  *
  *
  * Created on Apr 12. 2016 by Ben Titus
- * Last edit made Apr 23, 2016 by Ben Titus
+ * Last edit made Apr 24, 2016 by Ben Titus
  */
 
 #include <Arduino.h>
@@ -29,18 +29,24 @@ const float track = 119.25;
 const int ticksPerShaftRev = 6;
 const int fullEncTicksPerWheelRev = 3575;
 const int encTicksPerWheelRev = 1788;
-const int tickPer90 = 1577;
+const int tickPer90 = 1577; //calculated as 1577
 
 
 //length of movement array
 #define ARRAY_LENGTH 64
 
 
- //defining states
+ //defining main states
 #define STOP 0
 #define FIND_CANDLE 1
-#define EXTINGUISH_FIRE 2
-#define RETURN_HOME 3
+#define AVOID_WALLS 2
+#define EXTINGUISH_FIRE 3
+#define RETURN_HOME 4
+
+
+//defining turning states
+#define ENCODER_TURN 0
+#define IMU_TURN 1
 
 
 //defining wall avoidance states
@@ -55,9 +61,11 @@ const int tickPer90 = 1577;
 #define NO_WALLS_RIGHT 8         //
 
 
-//candle finding states
+//defining candle finding states
 #define CANDLE_FIND 0
-#define CANDLE_FOUND 1
+#define CANDLE_FOUND_WEAK 1
+#define CANDLE_FOUND_STRONG 2
+#define CANDLE_NOT_FOUND 3
 
 
 //Ultrasonic sensor Maximum distance
@@ -70,6 +78,10 @@ const int tickPer90 = 1577;
 
 //Maximum motor speed
 #define MAX_MOTOR_SPEED 255
+
+
+//IMU value for turning 90 degrees
+#define IMU90Turn 14.5
 
 
 //Analog Pins

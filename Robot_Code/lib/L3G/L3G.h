@@ -116,6 +116,3 @@ template <typename Ta, typename Tb> float L3G::vector_dot(const vector<Ta> *a, c
 }
 
 #endif
-
-
-

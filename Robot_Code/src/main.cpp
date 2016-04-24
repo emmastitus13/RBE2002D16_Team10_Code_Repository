@@ -6,17 +6,18 @@
  *
  *
  * Created on Apr 12. 2016 by Ben Titus
- * Last edit made Apr 23, 2016 by Ben Titus
+ * Last edit made Apr 24, 2016 by Ben Titus
  */
 
 #include <Arduino.h>
 #include <Servo.h>
-#include "LiquidCrystal.h"
-#include "TimerOne.h"
 #include <Wire.h>
+#include "TimerOne.h"
+#include "LiquidCrystal.h"
 #include "L3G.h"
+
 #include "definitions.cpp"
-#include "gyro.cpp"
+
 #include "DriveTrain.h"
 #include "FireExtinguisher.h"
 #include "hBridgeMotorDriver.h"
@@ -24,27 +25,33 @@
 #include "DebugLED.h"
 
 
-//test turns on Serial and debugLEDs
-bool test = true;
-
-
 //funciton prototypes
-void logMove(void);
-unsigned long readUS(NewPing us);
-void readAllUS(void);
 void findAndExtinguishCandle(void);
+
 void lEncoderISR(void);
 void rEncoderISR(void);
 void timer1ISR(void);
 void frontBumpISR(void);
+
 bool oneRotato(void);
-void driveStraight(void);
-uint8_t wallTest(void);
-void wallNav(void);
 bool turnLeft90(void);
 bool turnRight90(void);
+void driveStraight(void);
+
+unsigned long readUS(NewPing us);
+void readAllUS(void);
+
+uint8_t wallTest(void);
+void wallNav(void);
+
 void candleFind(void);
 uint8_t candleTest(void);
+void candleSweep(void);
+
+bool gyroSetup(L3G gyro);
+void gyroRead(L3G gyro);
+
+void logMove(void);
 
 
 //object declarations
@@ -56,12 +63,19 @@ FireExtinguisher fireExtinguisher(FAN_PIN, FLAME_SENSE_PINA, FLAME_SENSE_PIND, T
 LiquidCrystal LCD(RS_PIN, EN_PIN, DB1_PIN, DB2_PIN, DB3_PIN, DB4_PIN);
 DebugLED orange(ORANGE_LED_PIN);
 DebugLED blue(BLUE_LED_PIN);
+L3G gyro;
+
+
+//test turns on Serial and debugLEDs
+bool test = true;
 
 
 //states
 uint8_t wallState = WALL_TEST;
 volatile uint8_t botState = STOP;
 uint8_t candleState = CANDLE_FIND;
+uint8_t turnState = ENCODER_TURN;
+uint8_t sweepState = 1;
 
 
 //encoder values
@@ -71,6 +85,8 @@ unsigned long curRTicks = 0;
 unsigned long curLTicks = 0;
 unsigned int tickRDiff = 0;
 unsigned int tickLDiff = 0;
+int pastlEnc = 0;
+int pastrEnc = 0;
 
 //timer values
 volatile unsigned int timer1cnt = 0;
@@ -85,24 +101,43 @@ unsigned long lUSVal, rUSVal, frUSVal;
 
 //general variables
 bool upDown;
+bool gyroGood = false;
 
-//
+//driving variables
 volatile bool frBumpPush = false;
-int pastlEnc = 0, pastrEnc = 0;
 uint8_t baseDrive = 255;
 uint8_t driveL = baseDrive;
 uint8_t driveR = baseDrive;
+
+
+//movement variables
 uint8_t globi = 0;
 int buffTicks= 0;
 float tempAngle = 0.0;
 Movement movBuf = {globi, buffTicks, tempAngle};
 
+//gyro variables
+bool gyroTest = true;
 
+float G_Dt=0.005;    // Integration time (DCM algorithm)  We will run the integration loop at 50Hz if possible
+
+long gyroTimer=0;   //general purpose timer
+long gyroTimer1=0;
+
+float G_gain=.008699; // gyros gain factor for 250deg/se
+float gyro_z; //gyro x val
+float gyro_zold; //gyro cummulative z value
+float gerrz; // Gyro 7 error
+float minErr = 0.0;
+
+
+//candle positions
 float xPos = 0; //x position of the candle
 float yPos = 0; //y position of the candle
 float zPos = 0; //z position of the candle
 
 
+//arrays
 NewPing USSensors[3] ={leftUS, frontUS, rightUS};
 unsigned long USVals[3] = {lUSVal, rUSVal, frUSVal};
 Movement movements[ARRAY_LENGTH];
@@ -115,7 +150,7 @@ void setup() {
     orange.debugLEDOFF();
 
     LCD.begin(16,2);
-    //LCD.setCursor(0,0);
+    LCD.setCursor(0,0);
     LCD.print("LOADING");
 
     if (test) {
@@ -142,18 +177,66 @@ void setup() {
     servoMinimum = fireExtinguisher.servoMin;
     servoPosition = fireExtinguisher.servoPos;
     upDown = true;
+    curRTicks = 0;
+    curLTicks = 0;
+    tickRDiff = 0;
+    tickLDiff = 0;
 
     robotDrive.botStop();
     fireExtinguisher.fanOff();
     timer = millis();
 }
 
-
 /*************************************************************************************************************************/
 void loop() {
-    orange.debugLEDFlash();
-    candleSweep();
-    delay(250);
+    if ((candleState % 4) == 0) {
+        if (turnRight90()) {
+            robotDrive.botStop();
+            tickRDiff = 0;
+            tickLDiff = 0;
+            curRTicks = rEncode;
+            curLTicks = lEncode;
+            gyroGood = false;
+            candleState++;
+            delay(250);
+        }
+    }
+    if ((candleState % 4) == 1) {
+        if (turnLeft90()) {
+            robotDrive.botStop();
+            tickRDiff = 0;
+            tickLDiff = 0;
+            curRTicks = rEncode;
+            curLTicks = lEncode;
+            gyroGood = false;
+            candleState++;
+            delay(250);
+        }
+    }
+    if ((candleState % 4) == 2) {
+        if (turnLeft90()) {
+            robotDrive.botStop();
+            tickRDiff = 0;
+            tickLDiff = 0;
+            curRTicks = rEncode;
+            curLTicks = lEncode;
+            gyroGood = false;
+            candleState++;
+            delay(250);
+        }
+    }
+    if ((candleState % 4) == 3) {
+        if (turnRight90()) {
+            robotDrive.botStop();
+            tickRDiff = 0;
+            tickLDiff = 0;
+            curRTicks = rEncode;
+            curLTicks = lEncode;
+            gyroGood = false;
+            candleState++;
+            delay(25000);
+        }
+    }
  }
 
 
@@ -230,6 +313,25 @@ void logMove() {
 }
 
 
+//calculates the position of the candle then stores it in xPos, yPos, and zPos
+//this function will be called after extinguishing the candle
+void calcDist(Movement mov) {
+    xPos = 0;
+    yPos = 0;
+
+    float mag = ((mov.encTicks / encTicksPerWheelRev) * wheelCirc) / 10.0;
+    xMov[mov.index] = mag * cos(mov.angle);
+    yMov[mov.index] = mag * sin(mov.angle);
+
+    for (int i = 0; i < ARRAY_LENGTH; i++) {
+        xPos += xMov[i];
+        yPos += yMov[i];
+    }
+
+    //use the servoPos to calculate the z position of the candle
+}
+
+
 //reads the values of a US sensor
 unsigned long readUS(NewPing us) {
     return us.ping_cm();
@@ -281,11 +383,11 @@ void driveStraight() {
 
 //moves the robot forward one wheel rotation
 bool oneRotato() {
-    // if (test) {
-    //     Serial.print(lEncode);
-    //     Serial.print(" ");
-    //     Serial.println(rEncode);
-    // }
+    if (test) {
+        Serial.print(lEncode);
+        Serial.print(" ");
+        Serial.println(rEncode);
+    }
 
     tickRDiff = (rEncode - curRTicks);
     tickLDiff = (lEncode - curLTicks);
@@ -301,19 +403,84 @@ bool oneRotato() {
 }
 
 
+//turns the robot 90 degrees to the left
+bool turnLeft90(void) {
+    switch (turnState) {
+        case ENCODER_TURN:
+            gyroRead(gyro);
+            tickRDiff = (rEncode - curRTicks);
+            tickLDiff = (lEncode - curLTicks);
+
+            if ((tickRDiff < tickPer90) || (tickLDiff < tickPer90)) {
+                robotDrive.botTurnLeft();
+                return false;
+            }
+            robotDrive.botStop();
+            return true;
+            break;
+
+        case IMU_TURN:
+            if (gyro_z < IMU90Turn) {
+                robotDrive.botTurnLeft();
+                return false;
+            }
+            robotDrive.botStop();
+            return true;
+            break;
+
+        default:
+            return false;
+    }
+}
+
+
+//turns the robot 90 degrees to the right
+bool turnRight90(void) {
+    switch (turnState) {
+        case ENCODER_TURN:
+            gyroRead(gyro);
+            tickRDiff = (rEncode - curRTicks);
+            tickLDiff = (lEncode - curLTicks);
+
+            if ((tickRDiff < tickPer90) || (tickLDiff < tickPer90)) {
+                robotDrive.botTurnRight();
+                return false;
+            }
+            robotDrive.botStop();
+            return true;
+            break;
+
+        case IMU_TURN:
+            if (gyro_z < IMU90Turn) {
+                robotDrive.botTurnRight();
+                return false;
+            }
+            robotDrive.botStop();
+            return true;
+            break;
+
+        default:
+            return false;
+    }
+}
+
+
 //determines where a wall is, if there is a wall
 uint8_t wallTest() {
     readAllUS();
+    //if one side is too slow
     if (driveL < (baseDrive - 15)) {
         driveL = baseDrive - 5;
     }
     if (driveR < (baseDrive - 15)) {
         driveR = baseDrive - 5;
     }
+    //reset encoder values
     curLTicks = lEncode;
     curRTicks = rEncode;
     tickLDiff = 0;
     tickRDiff = 0;
+
     if ((USVals[2] < 10) && (USVals[2] > 0)) { //if a wall in front
         if ((USVals[0] > USVals[1]) && (USVals[1] > 0)) { //if a left wall is nearer than a right wall
                 if (test) {
@@ -370,6 +537,8 @@ uint8_t wallTest() {
     if ((USVals[0] > 10) && (USVals[1] > 10) && (USVals[2] > 10)) {
         return NO_WALLS;
     }
+
+    return WALL_TEST;
 }
 
 
@@ -385,12 +554,14 @@ void wallNav() {
 
         case TURN_RIGHT:
             if (turnRight90()) {
+                logMove();
                 wallState = WALL_TEST;
             } else {}
             break;
 
         case TURN_LEFT:
             if (turnLeft90()) {
+                logMove();
                 wallState = WALL_TEST;
             } else {}
             break;
@@ -424,58 +595,12 @@ void wallNav() {
             driveR++;
             wallState = FORWARD;
             break;
+
+        default:
+            Serial.println("Conrgrats");
+            wallState = WALL_TEST;
+            break;
     }
-}
-
-
-//turns the robot 90 degrees to the left
-bool turnLeft90(void) {
-
-    tickRDiff = (rEncode - curRTicks);
-    tickLDiff = (lEncode - curLTicks);
-
-    if ((tickRDiff <= tickPer90) || (tickLDiff <= tickPer90)) {
-        robotDrive.botTurnLeft();
-        return false;
-    } else {
-        robotDrive.botStop();
-        return true;
-    }
-}
-
-
-//turns the robot 90 degrees to the right
-bool turnRight90(void) {
-
-    tickRDiff = (rEncode - curRTicks);
-    tickLDiff = (lEncode - curLTicks);
-
-    if ((tickRDiff <= tickPer90) || (tickLDiff <= tickPer90)) {
-        robotDrive.botTurnRight();
-        return false;
-    } else {
-        robotDrive.botStop();
-        return true;
-    }
-}
-
-
-//calculates the position of the candle then stores it in xPos, yPos, and zPos
-//this function will be called after extinguishing the candle
-void calcDist(Movement mov) {
-    xPos = 0;
-    yPos = 0;
-
-    float mag = ((mov.encTicks / encTicksPerWheelRev) * wheelCirc) / 10.0;
-    xMov[mov.index] = mag * cos(mov.angle);
-    yMov[mov.index] = mag * sin(mov.angle);
-
-    for (int i = 0; i < ARRAY_LENGTH; i++) {
-        xPos += xMov[i];
-        yPos += yMov[i];
-    }
-
-    //use the servoPos to calculate the z position of the candle
 }
 
 
@@ -484,30 +609,175 @@ void candleFind(void) {
     fireExtinguisher.servoTilt(70);
     bool dig = fireExtinguisher.readFlameSenseDig();
     uint8_t an = fireExtinguisher.readFlameSenseDig();
-    Serial.print("DIG: ");
-    Serial.print(dig);
-    Serial.print("ANALOG: ");
-    Serial.println(an);
+    if (test) {
+        Serial.print("DIG: ");
+        Serial.print(dig);
+        Serial.print("ANALOG: ");
+        Serial.println(an);
+    }
 
     switch(candleState) {
-        case FIND_CANDLE:
-
-            candleTest();
+        case CANDLE_FIND:
+            wallState = candleTest();
             break;
 
-        case CANDLE_FOUND:
+        case CANDLE_FOUND_WEAK:
+            oneMovement();
+            wallState = candleTest();
+            break;
+
+        case CANDLE_FOUND_STRONG:
+            wallState = candleTestHigh();
+            break;
+
+        case CANDLE_NOT_FOUND:
+            candleSweep();
+            candleState = candleTest();
             break;
     }
 }
 
 
 //sweeps back and forth to search for the candle
-void candleTest(void) {
-    bool dig = fireExtinguisher.readGlameSenseDig();
-    uint8_t an = fireExtinguisher.readFlameSense();
+uint8_t candleTest(void) {
+    bool dig = fireExtinguisher.readFlameSenseDig();
+    int an = fireExtinguisher.readFlameSense();
+
+    if (an < 600) {
+        return CANDLE_FOUND_STRONG;
+    }
 
     if (dig) {
-        candleState = CANDLE_FOUND;
+        return CANDLE_FOUND_WEAK;
     }
-    
+
+    return CANDLE_NOT_FOUND;
+
+}
+
+
+//sweeps back and forth to search for the candle
+uint8_t candleTestHigh(void) {
+    robotDrive.botStop();
+    readAllUS();
+    bool dig = fireExtinguisher.readFlameSenseDig();
+    int an = fireExtinguisher.readFlameSense();
+
+
+
+    if (an < 600) {
+        return CANDLE_FOUND_STRONG;
+    }
+
+    if (dig) {
+        return CANDLE_FOUND_WEAK;
+    }
+
+    return CANDLE_NOT_FOUND;
+
+}
+
+
+//rotates the robot to scan for the candle flame
+void candleSweep(void) {
+    switch(candleState % 4) {
+        case 0:
+            if (turnRight90()) {
+                tickRDiff = 0;
+                tickLDiff = 0;
+                curRTicks = rEncode;
+                curLTicks = lEncode;
+                gyroGood = false;
+                candleState++;
+                delay(50);
+            }
+            break;
+
+        case 1:
+            if (turnLeft90()) {
+                tickRDiff = 0;
+                tickLDiff = 0;
+                curRTicks = rEncode;
+                curLTicks = lEncode;
+                gyroGood = false;
+                candleState++;
+                delay(50);
+            }
+            break;
+
+        case 2:
+            if (turnLeft90()) {
+                tickRDiff = 0;
+                tickLDiff = 0;
+                curRTicks = rEncode;
+                curLTicks = lEncode;
+                gyroGood = false;
+                candleState++;
+                delay(50);
+            }
+            break;
+
+        case 3:
+            if (turnRight90()) {
+                tickRDiff = 0;
+                tickLDiff = 0;
+                curRTicks = rEncode;
+                curLTicks = lEncode;
+                gyroGood = false;
+                candleState++;
+                delay(50);
+            }
+            break;
+    }
+}
+
+
+//initializes the gyro
+bool gyroSetup(L3G gyro) {
+    orange.debugLEDON();
+    gyro.enableDefault(); // gyro init. default 250/deg/s
+    delay(1000);// allow time for gyro to settle
+    for(int i =0;i<100;i++){  // takes 100 samples of the gyro
+        gyro.read();
+        gerrz+=gyro.g.z;
+        delay(25);
+    }
+    gerrz = gerrz/100;
+
+    if (gyroTest) {
+        Serial.println(gerrz);
+    }
+    orange.debugLEDOFF();
+    return true;
+}
+
+
+//reads the value of the gyro
+void gyroRead(L3G gyro) {
+    Wire.begin();
+    gyro.init();
+    if (!gyroGood) {
+        gyroGood = gyroSetup(gyro);
+    }
+    if(timer % 5) { // reads imu every 5ms
+
+        gyro.read(); // read gyro
+
+        gyro_z=(float)(gyro.g.z-gerrz)*G_gain;
+
+        gyro_z = gyro_z*G_Dt;
+
+        if (abs(gyro_z - gyro_zold) > minErr) {
+            gyro_z +=gyro_zold;
+        }
+
+        gyro_zold=gyro_z ;
+    }
+
+    if (gyroTest) {// prints the gyro value once per second
+        gyroTimer1=millis();
+        LCD.setCursor(0,1);
+        LCD.print("Z: ");
+        LCD.println(gyro_z);
+    }
 }
