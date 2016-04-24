@@ -1,12 +1,13 @@
 #include <Arduino.h>
-#include "driveFunctions.cpp"
+#include "DriveTrain.h"
 #include "definitions.cpp"
-#include "fireExtinguisher.cpp"
+#include "FireExtinguisher.h"
 #include "hBridgeMotorDriver.h"
 #include "NewPing.h"
 
 bool test = true;
 
+void findAndExtinguishCandle(void);
 void lEncoderISR(void);
 void rEncoderISR(void);
 
@@ -14,14 +15,19 @@ void rEncoderISR(void);
 NewPing leftUS(LEFT_US_TP, LEFT_US_EP, MAX_DISTANCE);
 NewPing rightUS(RIGHT_US_TP, RIGHT_US_EP, MAX_DISTANCE);
 NewPing forwardUS(FORWARD_US_TP, FORWARD_US_EP, MAX_DISTANCE);
+DriveTrain robotDrive(LEFT_MOTOR_PIN1, LEFT_MOTOR_PIN2, RIGHT_MOTOR_PIN1, RIGHT_MOTOR_PIN2, MAX_MOTOR_SPEED);
+FireExtinguisher fireExtinguisher(FAN_PIN, FLAME_SENSE_PINA, FLAME_SENSE_PIND, TILT_SERVO_PIN, FLAME_SENSOR_CONSTANT);
+
+NewPing USSensors[3];
+USSensors[0] = leftUS;
+USSensors[1] = forwardUS;
+USSensors[2] = rightUS;
 
 volatile unsigned char botState = STOP;
 volatile unsigned long lEncode = 0;
 volatile unsigned long rEncode = 0;
 unsigned long currentL = 0, currentR = 0;
 
-Type2_Motor leftMotor(LEFT_MOTOR_PIN1, LEFT_MOTOR_PIN2);
-Type2_Motor rightMotor(RIGHT_MOTOR_PIN1, RIGHT_MOTOR_PIN2);
 
 void setup() {
     Serial.begin(115200);
@@ -35,29 +41,22 @@ void setup() {
 }
 
 void loop() {
-    if (test) {
-        delay(50);
-        int uS = leftUS.ping();
-        Serial.print("Ping: ");
-        Serial.print(uS / US_ROUNDTRIP_CM);
-        Serial.println("cm");
-        /*
-        leftMotor.driveBackward(255);
-        rightMotor.driveForward(255);
-        Serial.print("Left Encoder: ");
-        Serial.print((lEncode - currentL) / 500);
-        Serial.print(" Right Encoder: ");
-        Serial.println((rEncode - currentR) / 500);
-        delay(500);
-        currentL = lEncode;
-        currentR = rEncode;*/
-    } else {
-        switch (botState) {
-            case STOP:
-                break;
+    delay(50);
+    int uS = leftUS.ping();
+    Serial.print("Ping: ");
+    Serial.print(uS / US_ROUNDTRIP_CM);
+    Serial.println("cm");
+    /*
+    leftMotor.driveBackward(255);
+    rightMotor.driveForward(255);
+    Serial.print("Left Encoder: ");
+    Serial.print((lEncode - currentL) / 500);
+    Serial.print(" Right Encoder: ");
+    Serial.println((rEncode - currentR) / 500);
+    delay(500);
+    currentL = lEncode;
+    currentR = rEncode;*/
 
-        }
-    }
 }
 
 
@@ -66,4 +65,20 @@ void lEncoderISR(void) {
 }
 void rEncoderISR(void) {
     rEncode++;
+}
+
+void findAndExtinguishCandle(void) {
+    switch (botState) {
+        case STOP:
+            break;
+
+        case FIND_CANDLE:
+            break;
+
+        case EXTINGUISH_CANDLE:
+            break;
+
+        case RETURN_HOME:
+            break;
+    }
 }
