@@ -38,8 +38,11 @@ void DebugLED::debugLEDTOG(void) {
 
 //flashes the debug LED
 void DebugLED::debugLEDFlash(void) {
-    debugLEDOFF();
-    debugLEDON();
-    delay(250);
-    debugLEDOFF();
+    digitalWrite(LEDPin, 0);
+    state = 0;
+    digitalWrite(LEDPin, !state);
+    state = !state;
+    delay(150);
+    digitalWrite(LEDPin, !state);
+    state = !state;
 }
