@@ -6,7 +6,7 @@
  * FLAME_SENSOR - 1 Analog Input, 1 Digital Input
  *
  * Created on Apr 12, 2016 by Ben Titus
- * Last edit made Apr 17, 2016 by Ben Titus
+ * Last edit made Apr 24, 2016 by Ben Titus
  */
 
 #include "FireExtinguisher.h"
@@ -38,7 +38,7 @@ void FireExtinguisher::extinguishFire(void) {
     int val = readFlameSense();
     while (val < 950) {
         fanOn();
-        //delay(2000);
+        delay(2000);
         val = readFlameSense();
     }
     fanOff();
@@ -86,25 +86,16 @@ void FireExtinguisher::servoTilt(int tiltTo) {
 int FireExtinguisher::findFlame(void) {
     servoTilt(servoMin); //reset the tilt servo to minimum position
 
-    int tolerance = 40;
-    int pastFlameVal, flameVal;
-    pastFlameVal = 1024; //set the past value to maximum
+    int tolerance = 70;
+    int flameVal;
     flameVal = readFlameSense(); //get the current flame sensor value
 
     for (int i = servoMax; i > servoMin; i--) {
-      Serial.print(flameVal);
-      Serial.print(" ");
-      Serial.print(pastFlameVal);
-      Serial.print(" ");
-      Serial.println(i);
         if (flameVal < tolerance) {
-          Serial.println("Sup");
             return i;
         } else {
-            pastFlameVal = flameVal;
             servoTilt(i);
             flameVal = readFlameSense();
-            Serial.println("Dawg");
         }
         delay(100);
     }
@@ -124,4 +115,16 @@ void FireExtinguisher::fanOn(void) {
 //turns off the fan
 void FireExtinguisher::fanOff(void) {
     digitalWrite(fanPin, LOW);
+}
+
+
+//converts the servo position to the angle it is tilted
+float FireExtinguisher::servoPosToAngle() {
+    return (((8.0/9.0) * (float)servoPos) + 34.0);
+}
+
+
+//returns a distance correction based on the servo position
+float FireExtinguisher::distCorrect(void) {
+    return (float)servoPos * 0.6;
 }

@@ -6,7 +6,7 @@
  * FLAME_SENSOR - 1 Analog Input, 1 Digital Input
  *
  * Created on Apr 12. 2016 by Ben Titus
- * Last edit made Apr 17, 2016 by Ben Titus
+ * Last edit made Apr 24, 2016 by Ben Titus
  */
 
 #ifndef FireExtinguish_h
@@ -28,6 +28,9 @@ class FireExtinguisher {
         int findFlame(void); //scans up until flame is found then returns servoPos
         void fanOn(void); //turns the fan on
         void fanOff(void); //turns the fan off
+        float servoPosToAngle(void);
+        float distCorrect(void);
+
         uint8_t servoPos, //current position of the servo
                 servoMin, //minimum value of the servo (fans pointing almost flat)
                 servoMax; //maximum value of the servo (fans pointing almost up)

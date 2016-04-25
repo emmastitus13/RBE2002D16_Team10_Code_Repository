@@ -36,6 +36,10 @@ void frontBumpISR(void);
 bool oneRotato(void);
 bool turnLeft90(void);
 bool turnRight90(void);
+bool turnLeft90Slow(void);
+bool turnRight90Slow(void);
+bool turnSlightLeft(void);
+bool turnSlightRight(void);
 void driveStraight(void);
 
 unsigned long readUS(NewPing us);
@@ -46,12 +50,16 @@ void wallNav(void);
 
 void candleFind(void);
 uint8_t candleTest(void);
+uint8_t candleTestHigh(void);
 void candleSweep(void);
+void candleSlowSweep(void);
+void candleSlightSweep(void);
 
 bool gyroSetup(L3G gyro);
 void gyroRead(L3G gyro);
 
 void logMove(void);
+void candleZ(void);
 
 
 //object declarations
@@ -74,8 +82,10 @@ bool test = true;
 uint8_t wallState = WALL_TEST;
 volatile uint8_t botState = STOP;
 uint8_t candleState = CANDLE_FIND;
-uint8_t turnState = ENCODER_TURN;
-uint8_t sweepState = 1;
+uint8_t turnState = IMU_TURN;
+uint8_t sweepState = 0;
+uint8_t slowSweepState = 1;
+uint8_t slightSweepState = 0;
 
 
 //encoder values
@@ -102,13 +112,13 @@ unsigned long lUSVal, rUSVal, frUSVal;
 //general variables
 bool upDown;
 bool gyroGood = false;
+uint8_t ii;
 
 //driving variables
 volatile bool frBumpPush = false;
 uint8_t baseDrive = 255;
 uint8_t driveL = baseDrive;
 uint8_t driveR = baseDrive;
-
 
 //movement variables
 uint8_t globi = 0;
@@ -117,8 +127,6 @@ float tempAngle = 0.0;
 Movement movBuf = {globi, buffTicks, tempAngle};
 
 //gyro variables
-bool gyroTest = true;
-
 float G_Dt=0.005;    // Integration time (DCM algorithm)  We will run the integration loop at 50Hz if possible
 
 long gyroTimer=0;   //general purpose timer
@@ -128,7 +136,7 @@ float G_gain=.008699; // gyros gain factor for 250deg/se
 float gyro_z; //gyro x val
 float gyro_zold; //gyro cummulative z value
 float gerrz; // Gyro 7 error
-float minErr = 0.0;
+float minErr = 0.005;
 
 
 //candle positions
@@ -142,6 +150,7 @@ NewPing USSensors[3] ={leftUS, frontUS, rightUS};
 unsigned long USVals[3] = {lUSVal, rUSVal, frUSVal};
 Movement movements[ARRAY_LENGTH];
 float xMov[ARRAY_LENGTH], yMov[ARRAY_LENGTH];
+int flameVals[ARRAY_LENGTH];
 
 
 /*************************************************************************************************************************/
@@ -185,58 +194,31 @@ void setup() {
     robotDrive.botStop();
     fireExtinguisher.fanOff();
     timer = millis();
+    LCD.clear();
 }
 
 /*************************************************************************************************************************/
 void loop() {
-    if ((candleState % 4) == 0) {
-        if (turnRight90()) {
-            robotDrive.botStop();
-            tickRDiff = 0;
-            tickLDiff = 0;
-            curRTicks = rEncode;
-            curLTicks = lEncode;
-            gyroGood = false;
-            candleState++;
-            delay(250);
-        }
-    }
-    if ((candleState % 4) == 1) {
-        if (turnLeft90()) {
-            robotDrive.botStop();
-            tickRDiff = 0;
-            tickLDiff = 0;
-            curRTicks = rEncode;
-            curLTicks = lEncode;
-            gyroGood = false;
-            candleState++;
-            delay(250);
-        }
-    }
-    if ((candleState % 4) == 2) {
-        if (turnLeft90()) {
-            robotDrive.botStop();
-            tickRDiff = 0;
-            tickLDiff = 0;
-            curRTicks = rEncode;
-            curLTicks = lEncode;
-            gyroGood = false;
-            candleState++;
-            delay(250);
-        }
-    }
-    if ((candleState % 4) == 3) {
-        if (turnRight90()) {
-            robotDrive.botStop();
-            tickRDiff = 0;
-            tickLDiff = 0;
-            curRTicks = rEncode;
-            curLTicks = lEncode;
-            gyroGood = false;
-            candleState++;
-            delay(25000);
-        }
-    }
+    candleFind();
+    // readAllUS();
+    // LCD.setCursor(0,0);
+    // LCD.print("Finding flame");
+    // fireExtinguisher.findFlame();
+    // LCD.clear();
+    // LCD.setCursor(0,0);
+    // LCD.print("Extinghuishing");
+    // LCD.setCursor(0,1);
+    // LCD.print("Fire");
+    // fireExtinguisher.extinguishFire();
+    // LCD.clear();
+    // LCD.setCursor(0,0);
+    // LCD.print("Fire is out");
+    // LCD.setCursor(0,1);
+    // LCD.print("Pos:");
+    // LCD.print(fireExtinguisher.servoPosToAngle());
+    // LCD.print(" dist:");
+    // LCD.print(USVals[2]);
+    // delay(1000000);
  }
 
 
@@ -332,6 +314,15 @@ void calcDist(Movement mov) {
 }
 
 
+//calculates the height of the candle
+void candleZ(void) {
+    readAllUS();
+    float angle = fireExtinguisher.servoPosToAngle();
+    float dist = USVals[2] + fireExtinguisher.distCorrect();
+    zPos = (dist * tan(angle)) + 0.5;
+}
+
+
 //reads the values of a US sensor
 unsigned long readUS(NewPing us) {
     return us.ping_cm();
@@ -361,7 +352,7 @@ void driveStraight() {
             driveL--;
         }
         if (diffR - diffL > 0) {
-            driveL++;
+            driveR--;
         }
         if (test) {
             Serial.print("Leftt / sec: ");
@@ -397,7 +388,12 @@ bool oneRotato() {
         driveStraight();
         return false;
     } else {
-        //robotDrive.botStop();
+        robotDrive.botStop();
+        //reset encoder values
+        curLTicks = lEncode;
+        curRTicks = rEncode;
+        tickLDiff = 0;
+        tickRDiff = 0;
         return true;
     }
 }
@@ -416,15 +412,25 @@ bool turnLeft90(void) {
                 return false;
             }
             robotDrive.botStop();
+            //reset encoder values
+            curLTicks = lEncode;
+            curRTicks = rEncode;
+            tickLDiff = 0;
+            tickRDiff = 0;
             return true;
             break;
 
         case IMU_TURN:
-            if (gyro_z < IMU90Turn) {
+        gyroRead(gyro);
+            if (gyro_z < IMU_TURN_90_LEFT) {
                 robotDrive.botTurnLeft();
                 return false;
             }
             robotDrive.botStop();
+            //reset the gyro
+            gyroGood = false;
+            gyro_z = 0;
+            gyro_zold = 0;
             return true;
             break;
 
@@ -447,21 +453,151 @@ bool turnRight90(void) {
                 return false;
             }
             robotDrive.botStop();
+            //reset encoder values
+            curLTicks = lEncode;
+            curRTicks = rEncode;
+            tickLDiff = 0;
+            tickRDiff = 0;
             return true;
             break;
 
         case IMU_TURN:
-            if (gyro_z < IMU90Turn) {
+            gyroRead(gyro);
+            if (gyro_z > IMU_TURN_90_RIGHT) {
                 robotDrive.botTurnRight();
                 return false;
             }
             robotDrive.botStop();
+            //reset the gyro
+            gyroGood = false;
+            gyro_z = 0;
+            gyro_zold = 0;
             return true;
             break;
 
         default:
             return false;
     }
+}
+
+
+//turns the robot 90 degrees to the left
+bool turnLeft90Slow(void) {
+    switch (turnState) {
+        case ENCODER_TURN:
+            gyroRead(gyro);
+            tickRDiff = (rEncode - curRTicks);
+            tickLDiff = (lEncode - curLTicks);
+
+            if ((tickRDiff < tickPer90) || (tickLDiff < tickPer90)) {
+                robotDrive.botDrive(100, -100);
+                return false;
+            }
+            robotDrive.botStop();
+            //reset encoder values
+            curLTicks = lEncode;
+            curRTicks = rEncode;
+            tickLDiff = 0;
+            tickRDiff = 0;
+            return true;
+            break;
+
+        case IMU_TURN:
+        gyroRead(gyro);
+            if (gyro_z < IMU_TURN_90_LEFT) {
+                robotDrive.botDrive(100, -100);
+                return false;
+            }
+            robotDrive.botStop();
+            //reset the gyro
+            gyroGood = false;
+            gyro_z = 0;
+            gyro_zold = 0;
+            return true;
+            break;
+
+        default:
+            return false;
+    }
+}
+
+
+//turns the robot 90 degrees to the right
+bool turnRight90Slow(void) {
+    switch (turnState) {
+        case ENCODER_TURN:
+            gyroRead(gyro);
+            tickRDiff = (rEncode - curRTicks);
+            tickLDiff = (lEncode - curLTicks);
+
+            if ((tickRDiff < tickPer90) || (tickLDiff < tickPer90)) {
+                robotDrive.botDrive(-100, 100);
+                return false;
+            }
+            robotDrive.botStop();
+            //reset encoder values
+            curLTicks = lEncode;
+            curRTicks = rEncode;
+            tickLDiff = 0;
+            tickRDiff = 0;
+            return true;
+            break;
+
+        case IMU_TURN:
+            gyroRead(gyro);
+            if (gyro_z > IMU_TURN_90_RIGHT) {
+                robotDrive.botDrive(-100, 100);
+                return false;
+            }
+            robotDrive.botStop();
+            //reset the gyro
+            gyroGood = false;
+            gyro_z = 0;
+            gyro_zold = 0;
+            return true;
+            break;
+
+        default:
+            return false;
+    }
+}
+
+
+//turns the robot 90 degrees to the left
+bool turnSlightLeft(void) {
+    tickRDiff = (rEncode - curRTicks);
+    tickLDiff = (lEncode - curLTicks);
+
+    if ((tickRDiff < tickPer90) || (tickLDiff < tickPer90)) {
+        robotDrive.botDrive(50, -50);
+        return false;
+    }
+    robotDrive.botStop();
+    //reset encoder values
+    curLTicks = lEncode;
+    curRTicks = rEncode;
+    tickLDiff = 0;
+    tickRDiff = 0;
+    return true;
+}
+
+
+//turns the robot 90 degrees to the right
+bool turnSlightRight(void) {
+    tickRDiff = (rEncode - curRTicks);
+    tickLDiff = (lEncode - curLTicks);
+
+    if ((tickRDiff < tickPer90) || (tickLDiff < tickPer90)) {
+        robotDrive.botDrive(-50, 50);
+        return false;
+    }
+    robotDrive.botStop();
+    //reset encoder values
+    curLTicks = lEncode;
+    curRTicks = rEncode;
+    tickLDiff = 0;
+    tickRDiff = 0;
+    return true;
 }
 
 
@@ -475,11 +611,6 @@ uint8_t wallTest() {
     if (driveR < (baseDrive - 15)) {
         driveR = baseDrive - 5;
     }
-    //reset encoder values
-    curLTicks = lEncode;
-    curRTicks = rEncode;
-    tickLDiff = 0;
-    tickRDiff = 0;
 
     if ((USVals[2] < 10) && (USVals[2] > 0)) { //if a wall in front
         if ((USVals[0] > USVals[1]) && (USVals[1] > 0)) { //if a left wall is nearer than a right wall
@@ -606,33 +737,92 @@ void wallNav() {
 
 //sweeps back and forth to find the candle
 void candleFind(void) {
-    fireExtinguisher.servoTilt(70);
-    bool dig = fireExtinguisher.readFlameSenseDig();
-    uint8_t an = fireExtinguisher.readFlameSenseDig();
-    if (test) {
-        Serial.print("DIG: ");
-        Serial.print(dig);
-        Serial.print("ANALOG: ");
-        Serial.println(an);
-    }
+    LCD.setCursor(0,0);
+    LCD.print(candleState);
+    fireExtinguisher.servoTilt(60);
+    blue.debugLEDOFF();
 
     switch(candleState) {
         case CANDLE_FIND:
-            wallState = candleTest();
-            break;
-
-        case CANDLE_FOUND_WEAK:
-            oneMovement();
-            wallState = candleTest();
-            break;
-
-        case CANDLE_FOUND_STRONG:
-            wallState = candleTestHigh();
+            LCD.setCursor(0,0);
+            LCD.print("FIND");
+            candleState = candleTest();
             break;
 
         case CANDLE_NOT_FOUND:
-            candleSweep();
+            LCD.setCursor(0,0);
+            LCD.print("No find");
+            turnRight90();
             candleState = candleTest();
+            break;
+
+        case CANDLE_FOUND:
+            LCD.setCursor(0,0);
+            LCD.print("Found");
+            readAllUS();
+            if ((USVals[2] > 0) && (USVals[2] < 25)) {
+                candleState = LINE_IT_UP;
+            }
+            robotDrive.botStop();
+            if (oneRotato()) {
+                candleState = candleTest();
+            }
+            break;
+
+        case LINE_IT_UP:
+            LCD.setCursor(0,0);
+            LCD.print("Very Strong");
+            if (oneRotato()) {
+                robotDrive.botStop();
+                if (oneRotato()) {
+                    candleState = candleTest();
+                }
+                readAllUS();
+                LCD.setCursor(0,1);
+                LCD.print(USVals[2]);
+                if ((USVals[2] > 0) && (USVals[2] < 25)) {
+                    candleState = EXTINGUISH_CANDLE;
+                    blue.debugLEDON();
+                }
+                if (fireExtinguisher.readFlameSense() < 150) {
+                    candleState = LINE_IT_UP_AGAIN;
+                    orange.debugLEDON();
+                }
+            }
+            break;
+
+        case LINE_IT_UP_AGAIN:
+            //candleSlightSweep();
+            flameVals[ii] = fireExtinguisher.readFlameSense();
+            if (ii > 3) {
+                if (flameVals[ii] < flameVals[ii-3]) {
+                    robotDrive.botStop();
+                    candleState = EXTINGUISH_CANDLE;
+                }
+            }
+            ii++;
+            break;
+
+        case EXTINGUISH_CANDLE:
+            robotDrive.botStop();
+            LCD.setCursor(0,0);
+            LCD.print("Extinguishing");
+            fireExtinguisher.findFlame();
+            fireExtinguisher.extinguishFire();
+            if (fireExtinguisher.readFlameSense() > 980) {
+                candleState = FIRE_EXTINGUISHED;
+            }
+            oneRotato();
+            break;
+
+        case FIRE_EXTINGUISHED:
+            robotDrive.botStop();
+            LCD.setCursor(0,0);
+            LCD.print("Flame out");
+            break;
+
+        default:
+            wallState = CANDLE_FIND;
             break;
     }
 }
@@ -640,15 +830,16 @@ void candleFind(void) {
 
 //sweeps back and forth to search for the candle
 uint8_t candleTest(void) {
-    bool dig = fireExtinguisher.readFlameSenseDig();
-    int an = fireExtinguisher.readFlameSense();
 
-    if (an < 600) {
-        return CANDLE_FOUND_STRONG;
+    if (fireExtinguisher.readFlameSense() < 600) {
+        robotDrive.botStop();
+        return CANDLE_FOUND;
     }
 
-    if (dig) {
-        return CANDLE_FOUND_WEAK;
+    if (!fireExtinguisher.readFlameSenseDig()) {
+        robotDrive.botStop();
+        blue.debugLEDON();
+        return CANDLE_FOUND;
     }
 
     return CANDLE_NOT_FOUND;
@@ -663,14 +854,22 @@ uint8_t candleTestHigh(void) {
     bool dig = fireExtinguisher.readFlameSenseDig();
     int an = fireExtinguisher.readFlameSense();
 
+    candleSlightSweep();
 
+    if ((USVals[2] > 0) && (USVals[2] < 25)) {
+        return LINE_IT_UP;
+    }
+
+    if (an < 200) {
+        return LINE_IT_UP;
+    }
 
     if (an < 600) {
-        return CANDLE_FOUND_STRONG;
+        return CANDLE_FOUND;
     }
 
     if (dig) {
-        return CANDLE_FOUND_WEAK;
+        return CANDLE_FOUND;
     }
 
     return CANDLE_NOT_FOUND;
@@ -680,51 +879,99 @@ uint8_t candleTestHigh(void) {
 
 //rotates the robot to scan for the candle flame
 void candleSweep(void) {
-    switch(candleState % 4) {
+    switch(sweepState % 4) {
         case 0:
             if (turnRight90()) {
-                tickRDiff = 0;
-                tickLDiff = 0;
-                curRTicks = rEncode;
-                curLTicks = lEncode;
-                gyroGood = false;
-                candleState++;
+                sweepState++;
                 delay(50);
             }
             break;
 
         case 1:
             if (turnLeft90()) {
-                tickRDiff = 0;
-                tickLDiff = 0;
-                curRTicks = rEncode;
-                curLTicks = lEncode;
-                gyroGood = false;
-                candleState++;
+                sweepState++;
                 delay(50);
             }
             break;
 
         case 2:
             if (turnLeft90()) {
-                tickRDiff = 0;
-                tickLDiff = 0;
-                curRTicks = rEncode;
-                curLTicks = lEncode;
-                gyroGood = false;
-                candleState++;
+                sweepState++;
                 delay(50);
             }
             break;
 
         case 3:
             if (turnRight90()) {
-                tickRDiff = 0;
-                tickLDiff = 0;
-                curRTicks = rEncode;
-                curLTicks = lEncode;
-                gyroGood = false;
-                candleState++;
+                sweepState++;
+                delay(50);
+            }
+            break;
+    }
+}
+
+
+//rotates the robot to scan for the candle flame
+void candleSlowSweep(void) {
+    switch(slowSweepState % 4) {
+        case 0:
+            if (turnRight90Slow()) {
+                slowSweepState++;
+                delay(50);
+            }
+            break;
+
+        case 1:
+            if (turnLeft90Slow()) {
+                slowSweepState++;
+                delay(50);
+            }
+            break;
+
+        case 2:
+            if (turnLeft90Slow()) {
+                slowSweepState++;
+                delay(50);
+            }
+            break;
+
+        case 3:
+            if (turnRight90Slow()) {
+                slowSweepState++;
+                delay(50);
+            }
+            break;
+    }
+}
+
+
+//sweeps a small amount to the right and left using encoders
+void candleSlightSweep(void) {
+    switch(slightSweepState % 4) {
+        case 0:
+            if (turnRight90Slow()) {
+                slightSweepState++;
+                delay(50);
+            }
+            break;
+
+        case 1:
+            if (turnLeft90Slow()) {
+                slightSweepState++;
+                delay(50);
+            }
+            break;
+
+        case 2:
+            if (turnLeft90Slow()) {
+                slightSweepState++;
+                delay(50);
+            }
+            break;
+
+        case 3:
+            if (turnRight90Slow()) {
+                slightSweepState++;
                 delay(50);
             }
             break;
@@ -734,9 +981,10 @@ void candleSweep(void) {
 
 //initializes the gyro
 bool gyroSetup(L3G gyro) {
-    orange.debugLEDON();
+    delay(50);
     gyro.enableDefault(); // gyro init. default 250/deg/s
     delay(1000);// allow time for gyro to settle
+    orange.debugLEDON();
     for(int i =0;i<100;i++){  // takes 100 samples of the gyro
         gyro.read();
         gerrz+=gyro.g.z;
@@ -744,7 +992,7 @@ bool gyroSetup(L3G gyro) {
     }
     gerrz = gerrz/100;
 
-    if (gyroTest) {
+    if (test) {
         Serial.println(gerrz);
     }
     orange.debugLEDOFF();
@@ -774,7 +1022,7 @@ void gyroRead(L3G gyro) {
         gyro_zold=gyro_z ;
     }
 
-    if (gyroTest) {// prints the gyro value once per second
+    if (test) {// prints the gyro value once per second
         gyroTimer1=millis();
         LCD.setCursor(0,1);
         LCD.print("Z: ");

@@ -63,9 +63,12 @@ const int tickPer90 = 1577; //calculated as 1577
 
 //defining candle finding states
 #define CANDLE_FIND 0
-#define CANDLE_FOUND_WEAK 1
-#define CANDLE_FOUND_STRONG 2
+#define CANDLE_FOUND 1
 #define CANDLE_NOT_FOUND 3
+#define LINE_IT_UP 4
+#define EXTINGUISH_CANDLE 5
+#define FIRE_EXTINGUISHED 6
+#define LINE_IT_UP_AGAIN 7
 
 
 //Ultrasonic sensor Maximum distance
@@ -81,7 +84,8 @@ const int tickPer90 = 1577; //calculated as 1577
 
 
 //IMU value for turning 90 degrees
-#define IMU90Turn 14.5
+#define IMU_TURN_90_LEFT 36.8
+#define IMU_TURN_90_RIGHT -35
 
 
 //Analog Pins
@@ -127,15 +131,15 @@ const int tickPer90 = 1577; //calculated as 1577
 #define FRONT_BUMPER 19      // INT4 RX1
 //20 INT3 SDA
 //21 INT2 SCL
-//22
-//23
+#define LEFT_US_EP 22        //
+#define LEFT_US_TP 23        //
 //24
 //25
-#define LEFT_US_EP 27        //
-#define LEFT_US_TP 26        //
+//26
+#define FLAME_SENSE_PIND 27  // Flame sensor digital pin
 #define FORWARD_US_TP 28     //
 #define FORWARD_US_EP 29     //
-#define FLAME_SENSE_PIND 30  // Flame sensor digital pin
+//30
 //31
 //32
 //33
