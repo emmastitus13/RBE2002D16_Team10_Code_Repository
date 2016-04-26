@@ -22,7 +22,7 @@ class FireExtinguisher {
         void setServo(uint8_t min, uint8_t max); //attaches pins and sets the minimum and maximum values for the servo to turn to
         void extinguishFire(void); //if flame, turns on fan until flame gone
         int readFlameSense(void); //returns the analog value on the flame sensor
-        int readFlameSenseDig(void); //returns the digital value on the flame sensor
+        bool readFlameSenseDig(void); //returns the digital value on the flame sensor
         int getDistance(void); //probably won't be used, but converts analog value/servo position into flame distance
         void servoTilt(int tiltTo); //moves the servo to the specified position
         int findFlame(void); //scans up until flame is found then returns servoPos

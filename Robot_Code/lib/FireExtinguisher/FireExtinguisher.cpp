@@ -6,7 +6,7 @@
  * FLAME_SENSOR - 1 Analog Input, 1 Digital Input
  *
  * Created on Apr 12, 2016 by Ben Titus
- * Last edit made Apr 24, 2016 by Ben Titus
+ * Last edit made Apr 25, 2016 by Ben Titus
  */
 
 #include "FireExtinguisher.h"
@@ -54,7 +54,7 @@ int FireExtinguisher::readFlameSense(void) {
 
 //returns the digitalRead() value from the flame sensor
 //sensitivity can be adjusted by turning the potentiometer on the flame sensor
-int FireExtinguisher::readFlameSenseDig(void) {
+bool FireExtinguisher::readFlameSenseDig(void) {
     return digitalRead(flameSensePinD);
 }
 
@@ -86,7 +86,7 @@ void FireExtinguisher::servoTilt(int tiltTo) {
 int FireExtinguisher::findFlame(void) {
     servoTilt(servoMin); //reset the tilt servo to minimum position
 
-    int tolerance = 70;
+    int tolerance = 100;
     int flameVal;
     flameVal = readFlameSense(); //get the current flame sensor value
 
@@ -99,6 +99,7 @@ int FireExtinguisher::findFlame(void) {
         }
         delay(100);
     }
+    return 0;
 }
 
 
@@ -120,7 +121,7 @@ void FireExtinguisher::fanOff(void) {
 
 //converts the servo position to the angle it is tilted
 float FireExtinguisher::servoPosToAngle() {
-    return (((8.0/9.0) * (float)servoPos) + 34.0);
+    return (((8.0/9.0) * servoPos) - 34.0);
 }
 
 

@@ -6,7 +6,7 @@
  *
  *
  * Created on Apr 12. 2016 by Ben Titus
- * Last edit made Apr 24, 2016 by Ben Titus
+ * Last edit made Apr 25, 2016 by Ben Titus
  */
 
 #include <Arduino.h>
@@ -29,7 +29,16 @@ const float track = 119.25;
 const int ticksPerShaftRev = 6;
 const int fullEncTicksPerWheelRev = 3575;
 const int encTicksPerWheelRev = 1788;
-const int tickPer90 = 1577; //calculated as 1577
+const unsigned int encTicksPerSixthWheelRev = 298;
+const int tickPer5Deg = 87;
+const int tickPer90 = 1577;
+
+
+//IMU value for turning 90 degrees
+#define IMU_TURN_90_LEFT 81.70
+#define IMU_TURN_90_RIGHT -81.40
+#define IMU_TURN_5_LEFT 4.60
+#define IMU_TURN_5_RIGHT -4.60
 
 
 //length of movement array
@@ -38,9 +47,9 @@ const int tickPer90 = 1577; //calculated as 1577
 
  //defining main states
 #define STOP 0
-#define FIND_CANDLE 1
-#define AVOID_WALLS 2
-#define EXTINGUISH_FIRE 3
+#define NAVIGATE_MAZE 1
+#define FIND_CANDLE 2
+#define CALCULATE_VALUES 3
 #define RETURN_HOME 4
 
 
@@ -61,14 +70,20 @@ const int tickPer90 = 1577; //calculated as 1577
 #define NO_WALLS_RIGHT 8         //
 
 
+//defining maze exploring states
+#define MAZE_TEST 0
+#define WALL_AVOID 1
+#define SCAN_FOR_FIRE 2
+#define FIRE_DETECTED 3
+#define STEP_FORWARD 4
+
+
 //defining candle finding states
 #define CANDLE_FIND 0
 #define CANDLE_FOUND 1
 #define CANDLE_NOT_FOUND 3
-#define LINE_IT_UP 4
 #define EXTINGUISH_CANDLE 5
 #define FIRE_EXTINGUISHED 6
-#define LINE_IT_UP_AGAIN 7
 
 
 //Ultrasonic sensor Maximum distance
@@ -81,11 +96,6 @@ const int tickPer90 = 1577; //calculated as 1577
 
 //Maximum motor speed
 #define MAX_MOTOR_SPEED 255
-
-
-//IMU value for turning 90 degrees
-#define IMU_TURN_90_LEFT 36.8
-#define IMU_TURN_90_RIGHT -35
 
 
 //Analog Pins

@@ -3,7 +3,7 @@
  * IN1 - PWM pin
  * IN2 - PWM pin
  * Created by Ben Titus, April 5, 2016
- * Last edit made by Ben Titus, April 17, 2016
+ * Last edit made by Ben Titus, April 26, 2016
  */
 
 
@@ -54,16 +54,14 @@ void Type1_Motor::drive(int spd) {
 		spd = 255;
 	}
 
+	digitalWrite(enPin, LOW);
 	if (reverse) {
 		digitalWrite(in1Pin, LOW);
 		digitalWrite(in2Pin, HIGH);
 	} else {
-		digitalWrite(in2Pin, LOW);
 		digitalWrite(in1Pin, HIGH);
+		digitalWrite(in2Pin, LOW);
 	}
-	digitalWrite(enPin, LOW);
-	digitalWrite(in1Pin, !reverse);
-	digitalWrite(in2Pin, reverse);
 	analogWrite(enPin, spd);
 }
 
