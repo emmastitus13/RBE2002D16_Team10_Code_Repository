@@ -48,7 +48,9 @@ unsigned long readUS(NewPing us);
 void readAllUS(void);
 
 uint8_t wallTest(void);
-void wallNav(void);
+bool wallNav(void);
+bool aroundWall(void);
+bool wallSweep(bool dir);
 
 void candleFind(void);
 uint8_t candleTest(void);
@@ -91,6 +93,7 @@ uint8_t ii;
 int tempServoMin;
 int servoIndex;
 bool drawn = false;
+uint8_t wallCount = 0;
 
 
 //states
@@ -99,9 +102,11 @@ uint8_t wallState = WALL_TEST;
 uint8_t candleState = CANDLE_FIND;
 uint8_t turnState = IMU_TURN;
 uint8_t mazeState = MAZE_TEST;
+uint8_t aroundState = LEAVE_WALL;
 uint8_t sweepState = 0;
 uint8_t slowSweepState = 1;
 uint8_t slightSweepState = 0;
+uint8_t wallSweepState = SWEEP_FORWARDS;
 
 
 //encoder values
@@ -208,11 +213,12 @@ void setup() {
     fireExtinguisher.fanOff();
     timer = millis();
     LCD.clear();
+    go = true;
 }
 
 /*************************************************************************************************************************/
 void loop() {
-    wallNav();
+    findAndExtinguishCandle();
  }
 
 
@@ -431,6 +437,10 @@ bool turnLeft90(void) {
             LCD.setCursor(0,0);
             LCD.print(gyro_z);
             //reset the gyro
+            curLTicks = lEncode;
+            curRTicks = rEncode;
+            tickLDiff = 0;
+            tickRDiff = 0;
             gyroGood = false;
             gyro_z = 0;
             gyro_zold = 0;
@@ -473,6 +483,10 @@ bool turnRight90(void) {
             LCD.setCursor(0,0);
             LCD.print(gyro_z);
             //reset the gyro
+            curLTicks = lEncode;
+            curRTicks = rEncode;
+            tickLDiff = 0;
+            tickRDiff = 0;
             gyroGood = false;
             gyro_z = 0;
             gyro_zold = 0;
@@ -513,6 +527,10 @@ bool turn5DegLeft(uint8_t deg5) {
             }
             robotDrive.botStop();
             //reset the gyro
+            curLTicks = lEncode;
+            curRTicks = rEncode;
+            tickLDiff = 0;
+            tickRDiff = 0;
             gyroGood = false;
             gyro_z = 0;
             gyro_zold = 0;
@@ -552,6 +570,11 @@ bool turn5DegRight(uint8_t deg5) {
                 return false;
             }
             robotDrive.botStop();
+            //reset encoder values
+            curLTicks = lEncode;
+            curRTicks = rEncode;
+            tickLDiff = 0;
+            tickRDiff = 0;
             //reset the gyro
             gyroGood = false;
             gyro_z = 0;
@@ -608,33 +631,82 @@ bool sweep(void) {
     uint8_t mod4 = sweepState % 4;
     switch(mod4) {
         case 0:
-            if (turnRight90()) {
+            if (turn5DegRight(12)) {
                 sweepState++;
                 delay(50);
             }
             break;
 
         case 1:
-            if (turnLeft90()) {
+            if (turn5DegLeft(12)) {
                 sweepState++;
                 delay(50);
             }
             break;
 
         case 2:
-            if (turnLeft90()) {
+            if (turn5DegLeft(12)) {
                 sweepState++;
                 delay(50);
             }
             break;
 
         case 3:
-            if (turnRight90()) {
+            if (turn5DegRight(12)) {
                 blue.debugLEDON();
                 delay(50);
                 sweepState = 0;
                 return true;
             }
+            break;
+    }
+    return false;
+}
+
+
+//goes around a wall. Used in wallNav function
+bool aroundWall(void) {
+    switch (aroundState) {
+        case LEAVE_WALL:
+            if (rotato(6)) {
+                aroundState = TURN_ONE;
+            }
+            break;
+
+        case TURN_ONE:
+            if (turn5DegRight(18)) {
+                aroundState = PASS_WALL;
+            }
+            break;
+
+        case PASS_WALL:
+            if (rotato(2)) {
+                aroundState = CHECK_WALL;
+            }
+            break;
+
+        case CHECK_WALL:
+            readAllUS();
+            if ((USVals[0] > 0) && (USVals[0] < 30)) {
+                aroundState = TURN_TWO;
+            }
+            break;
+
+        case TURN_TWO:
+            if (turn5DegRight(18)) {
+                aroundState = CATCH_WALL;
+            }
+            break;
+
+        case CATCH_WALL:
+            if (rotato(12)) {
+                aroundState++;
+            }
+            break;
+
+        case AROUND_WALL:
+            aroundState = LEAVE_WALL;
+            return true;
             break;
     }
     return false;
@@ -647,7 +719,7 @@ uint8_t wallTest() {
     robotDrive.botStop();
     readAllUS();
 
-    if ((USVals[2] < 25) && (USVals[2] > 0)) { //if a wall in front
+    if ((USVals[2] < 13) && (USVals[2] > 0)) { //if a wall in front
         if ((USVals[0] > USVals[1]) && (USVals[1] > 0)) { //if a left wall is nearer than a right wall
                 return TURN_RIGHT;
         } else { //if a right wall is nearer than a left wall or no wall is nearer
@@ -666,11 +738,11 @@ uint8_t wallTest() {
     if ((USVals[0] <= 30) || (USVals[1] <= 30)) {
 
         if ((USVals[0] > 15) && (USVals[0] > 0)) { //if a left wall is near
-            return NO_WALLS_RIGHT;
+            return NO_WALLS_LEFT;
         }
 
         if ((USVals[1] > 15) && (USVals[1] > 0)) { //if a right wall is near
-            return NO_WALLS_LEFT;
+            return NO_WALLS_RIGHT;
         }
         return FORWARD;
     }
@@ -684,67 +756,85 @@ uint8_t wallTest() {
 
 
 //wall following function
-void wallNav() {
+bool wallNav() {
     switch(wallState) {
         case WALL_TEST:
             blue.debugLEDOFF();
+            orange.debugLEDOFF();
             robotDrive.botStop();
             wallState = wallTest();
             break;
 
         case TURN_RIGHT:
-            if (turn5DegRight(53)) {
+            if (turn5DegRight(18)) {
                 wallState = WALL_TEST;
             }
             break;
 
         case TURN_LEFT:
-            if (turn5DegLeft(53)) {
+            if (turn5DegLeft(18)) {
                 wallState = WALL_TEST;
             }
             break;
 
         case WALL_RIGHT:
-            driveL -= 10;
-            driveR += 0;
+            if (driveR <= driveL) {
+                driveL = driveR - 7;
+            } else {
+                driveR = driveL;
+            }
             wallState = FORWARD;
             break;
 
         case WALL_LEFT:
-            driveR -= 10;
-            driveL += 0;
+            if (driveL <= driveR) {
+                driveR = driveL - 7;
+            } else {
+                driveR = driveL;
+            }
             wallState = FORWARD;
             break;
 
         case FORWARD:
             blue.debugLEDON();
-            if (rotato(2)) {
+            if (rotato(9)) {
+                if (wallCount >= 20) {
+                    wallState = WALL_SCAN;
+                }
+                wallCount++;
                 wallState = WALL_TEST;
             }
             break;
 
+        case WALL_SCAN:
+            if (wallSweep(USVals[0] < USVals[1])) {
+                wallState = WALL_TEST;
+            }
+            if (!fireExtinguisher.readFlameSenseDig()) {
+                wallState = NO_WALLS;
+            }
+            break;
+
         case NO_WALLS:
-            robotDrive.botStop();
-            mazeState = MAZE_TEST;
-            wallState = WALL_TEST;
+            aroundWall();
             break;
 
         case NO_WALLS_RIGHT:
             if (driveL < driveR) {
-                driveL = driveR + 5;
+                driveL = driveR + 7;
             } else {
                 driveL = baseDrive;
-                driveR = driveL - 5;
+                driveR = driveL - 7;
             }
             wallState = FORWARD;
             break;
 
         case NO_WALLS_LEFT:
             if (driveR < driveL) {
-                driveR = driveL + 5;
+                driveR = driveL + 7;
             } else {
                 driveR = baseDrive;
-                driveL = driveR - 5;
+                driveL = driveR - 7;
             }
             wallState = FORWARD;
             break;
@@ -754,6 +844,68 @@ void wallNav() {
             wallState = WALL_TEST;
             break;
     }
+    return false;
+}
+
+
+//sweeps ~175 degrees back then forward
+bool wallSweep(bool dir) {
+    if (dir) {
+        switch (wallSweepState) {
+            case SWEEP_FORWARDS:
+                if (turn5DegLeft(36)) {
+                    wallSweepState = SWEEP_BACKWARDS;
+                    //reset encoder values
+                    curLTicks = lEncode;
+                    curRTicks = rEncode;
+                    tickLDiff = 0;
+                    tickRDiff = 0;
+                    rotato(1);
+                }
+                break;
+
+            case SWEEP_BACKWARDS:
+                if (turn5DegRight(36)) {
+                    wallSweepState = SWEEP_FORWARDS;
+                    orange.debugLEDON();
+                    //reset encoder values
+                    curLTicks = lEncode;
+                    curRTicks = rEncode;
+                    tickLDiff = 0;
+                    tickRDiff = 0;
+                    return true;
+                }
+                break;
+        }
+    } else {
+        switch (wallSweepState) {
+            case SWEEP_FORWARDS:
+                if (turn5DegRight(24)) {
+                    wallSweepState = SWEEP_BACKWARDS;
+                    //reset encoder values
+                    curLTicks = lEncode;
+                    curRTicks = rEncode;
+                    tickLDiff = 0;
+                    tickRDiff = 0;
+                    rotato(1);
+                }
+                break;
+
+            case SWEEP_BACKWARDS:
+                if (turn5DegLeft(24)) {
+                    wallSweepState = SWEEP_FORWARDS;
+                    orange.debugLEDON();
+                    //reset encoder values
+                    curLTicks = lEncode;
+                    curRTicks = rEncode;
+                    tickLDiff = 0;
+                    tickRDiff = 0;
+                    return true;
+                }
+                break;
+        }
+    }
+    return false;
 }
 
 
@@ -907,7 +1059,9 @@ void mazeSearch(void) {
         case WALL_AVOID:
             LCD.setCursor(0,0);
             LCD.print("Get out");
-            wallNav();
+            if (wallNav()) {
+                mazeState = MAZE_TEST;
+            }
             break;
 
         case SCAN_FOR_FIRE:
@@ -943,6 +1097,7 @@ void mazeSearch(void) {
 
 //returns the state to go to for maze searching
 uint8_t mazeWallTest(void) {
+    fireExtinguisher.servoTilt(60);
     readAllUS();
     if (((USVals[2] > 0) && (USVals[2] < 25)) ||
             ((USVals[0] > 0) && (USVals[0] < 25)) ||

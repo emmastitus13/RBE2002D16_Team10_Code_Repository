@@ -68,6 +68,12 @@ const int tickPer90 = 1577;
 #define NO_WALLS 6               //no walls near the fron, back, or left of the robot
 #define NO_WALLS_LEFT 7           //
 #define NO_WALLS_RIGHT 8         //
+#define WALL_SCAN 9
+
+
+//defining wall sweep states
+#define SWEEP_FORWARDS 0
+#define SWEEP_BACKWARDS 1
 
 
 //defining maze exploring states
@@ -84,6 +90,16 @@ const int tickPer90 = 1577;
 #define CANDLE_NOT_FOUND 3
 #define EXTINGUISH_CANDLE 5
 #define FIRE_EXTINGUISHED 6
+
+
+//defining around wall states
+#define LEAVE_WALL 0
+#define TURN_ONE 1
+#define PASS_WALL 2
+#define TURN_TWO 3
+#define CATCH_WALL 4
+#define AROUND_WALL 5
+#define CHECK_WALL 6
 
 
 //Ultrasonic sensor Maximum distance
@@ -139,10 +155,10 @@ const int tickPer90 = 1577;
 //17 RX2
 #define L_ENCODER_PIN 18     // INT5 TX1
 #define FRONT_BUMPER 19      // INT4 RX1
-//20 INT3 SDA
-//21 INT2 SCL
-#define LEFT_US_EP 22        //
-#define LEFT_US_TP 23        //
+//IMU INT3 SDA
+//IMU INT2 SCL
+#define LEFT_US_TP 22        //
+#define LEFT_US_EP 23        //
 //24
 //25
 //26
