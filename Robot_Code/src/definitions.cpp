@@ -6,7 +6,7 @@
  *
  *
  * Created on Apr 12. 2016 by Ben Titus
- * Last edit made Apr 25, 2016 by Ben Titus
+ * Last edit made Apr 27, 2016 by Ben Titus
  */
 
 #include <Arduino.h>
@@ -32,6 +32,11 @@ const int encTicksPerWheelRev = 1788;
 const unsigned int encTicksPerSixthWheelRev = 298;
 const int tickPer5Deg = 87;
 const int tickPer90 = 1577;
+
+
+//defining demo states
+#define FULL_DEMO 0
+#define FIND_CANDLE_DEMO 1
 
 
 //IMU value for turning 90 degrees
@@ -94,12 +99,8 @@ const int tickPer90 = 1577;
 
 //defining around wall states
 #define LEAVE_WALL 0
-#define TURN_ONE 1
-#define PASS_WALL 2
-#define TURN_TWO 3
-#define CATCH_WALL 4
-#define AROUND_WALL 5
-#define CHECK_WALL 6
+#define TURN_AROUND_WALL 1
+#define CATCH_WALL 2
 
 
 //Ultrasonic sensor Maximum distance
@@ -183,9 +184,9 @@ const int tickPer90 = 1577;
 #define DB4_PIN 45           // LCD Data Bit 4
 //46 PWM
 //47
-//48
+#define RIGHT_US_EP 48       //
 //49
-//50 MISO
+#define RIGHT_US_TP 50       // MISO
 //51 MOSI
-#define RIGHT_US_TP 52       //SCK
-#define RIGHT_US_EP 53       //SS
+//52 SCK
+//53 SS
