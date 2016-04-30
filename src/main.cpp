@@ -18,7 +18,7 @@
 #include "L3G.h"
 
 #include "definitions.cpp"
-
+#include "Robot.h"
 #include "DriveTrain.h"
 #include "FireExtinguisher.h"
 #include "hBridgeMotorDriver.h"
