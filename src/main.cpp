@@ -53,21 +53,16 @@ bool aroundWall(void);
 bool wallSweep(bool dir);
 
 bool candleFind(void);
-uint8_t candleTest(void);
 uint8_t candleTestHigh(void);
 void candleSlowSweep(void);
 void candleSlightSweep(void);
 
 bool mazeSearch(void);
-uint8_t mazeWallTest(void);
 
 bool gyroSetup(L3G gyro);
 void gyroRead(L3G gyro);
 
-void logMove(Movement mov);
-void candleZ(void);
-void updatePosition(int newX, int newY, int newZ);
-void printAllUS(void);
+
 
 
 //object declarations
@@ -80,7 +75,7 @@ LiquidCrystal LCD(RS_PIN, EN_PIN, DB1_PIN, DB2_PIN, DB3_PIN, DB4_PIN);
 DebugLED orange(ORANGE_LED_PIN);
 DebugLED blue(BLUE_LED_PIN);
 L3G gyro;
-
+Robot robot(LCD, fireExtinguisher, robotDrive);
 
 //test turns on Serial and debugLEDs
 bool test = true;
@@ -291,7 +286,7 @@ void findAndExtinguishCandle(void) {
             break;
 
         case CALCULATE_VALUES:
-            updatePosition(xPos, yPos, zPos);
+            robot.updatePosition(xPos, yPos, zPos);
             botState = RETURN_HOME;
             break;
 
@@ -299,27 +294,6 @@ void findAndExtinguishCandle(void) {
             break;
     }
 }
-
-
-//updates the LCD to display the current position
-void updatePosition(int newX, int newY, int newZ) {
-    char pos[10];
-    sprintf(pos, "%2d, %2d, %2d", newX, newY, newZ);
-    LCD.setCursor(0,0);
-    LCD.print("Flame Position:");
-    LCD.setCursor(0,1);
-    LCD.print(pos);
-}
-
-
-//records a movement
-//movement consists of an angle, a number of ticks
-//movements recorded in array of movements
-void logMove(Movement mov) {
-    movements[globi] = mov;
-    globi++;
-}
-
 
 //calculates the position of the candle then stores it in xPos, yPos, and zPos
 //this function will be called after extinguishing the candle
@@ -342,7 +316,7 @@ void calcDist(Movement mov) {
     yPos += yMov[mov.index];
 
     //use the servoPos to calculate the z position of the candle
-    candleZ();
+    robot.candleZ();
 
     //convert to inches
     xPos /= 2.54;
@@ -351,46 +325,12 @@ void calcDist(Movement mov) {
 }
 
 
-//calculates the height of the candle
-void candleZ(void) {
-    readAllUS();
-    float angle = fireExtinguisher.servoPosToAngle() * PI / 180;
-    zPos = ((USVals[2] + 5) * 2 / 3 * tan(angle)) + 19;
-}
-
-
-//prints the values of the ultrasonic sensors
-void printAllUS(void) {
-    readAllUS();
-    LCD.clear();
-    LCD.setCursor(0,0);
-    LCD.print("L: ");
-    LCD.print(USVals[0]);
-    LCD.print("F: ");
-    LCD.print(USVals[2]);
-    LCD.print("R: ");
-    LCD.print(USVals[1]);
-    delay(200);
-}
 
 
 /*************************************************************************************************************************/
 //reads the values of a US sensor
 unsigned long readUS(NewPing us) {
     return us.ping_cm();
-}
-
-
-//reads all three US sensors
-void readAllUS(void) {
-        USVals[0] = leftUS.ping_cm();
-        delay(50);
-
-        USVals[1] = rightUS.ping_cm();
-        delay(50);
-
-        USVals[2] = frontUS.ping_cm();
-        delay(50);
 }
 
 
@@ -463,7 +403,7 @@ bool turnLeft90(void) {
             }
             robotDrive.botStop();
             movBuf.angle += 90;
-            logMove(movBuf);
+            robot.logMove(movBuf);
             //reset encoder values
             curLTicks = lEncode;
             curRTicks = rEncode;
@@ -480,7 +420,7 @@ bool turnLeft90(void) {
             }
             robotDrive.botStop();
             movBuf.angle += 90;
-            logMove(movBuf);
+            robot.logMove(movBuf);
             LCD.setCursor(0,0);
             LCD.print(gyro_z);
             //reset the gyro
@@ -513,7 +453,7 @@ bool turnRight90(void) {
             }
             robotDrive.botStop();
             movBuf.angle -= 90;
-            logMove(movBuf);
+            Robot.logMove(movBuf);
             //reset encoder values
             curLTicks = lEncode;
             curRTicks = rEncode;
@@ -530,7 +470,7 @@ bool turnRight90(void) {
             }
             robotDrive.botStop();
             movBuf.angle -= 90;
-            logMove(movBuf);
+            robot.logMove(movBuf);
             LCD.setCursor(0,0);
             LCD.print(gyro_z);
             //reset the gyro
@@ -563,7 +503,7 @@ bool turn5DegLeft(uint8_t deg5) {
             }
             robotDrive.botStop();
             movBuf.angle += tempAngle;
-            logMove(movBuf);
+            robot.logMove(movBuf);
             //reset encoder values
             curLTicks = lEncode;
             curRTicks = rEncode;
@@ -581,7 +521,7 @@ bool turn5DegLeft(uint8_t deg5) {
             }
             robotDrive.botStop();
             movBuf.angle += tempAngle;
-            logMove(movBuf);
+            robot.logMove(movBuf);
             //reset the gyro
             curLTicks = lEncode;
             curRTicks = rEncode;
@@ -613,7 +553,7 @@ bool turn5DegRight(uint8_t deg5) {
             }
             robotDrive.botStop();
             movBuf.angle += tempAngle;
-            logMove(movBuf);
+            robot.logMove(movBuf);
             //reset encoder values
             curLTicks = lEncode;
             curRTicks = rEncode;
@@ -630,7 +570,7 @@ bool turn5DegRight(uint8_t deg5) {
             }
             robotDrive.botStop();
             movBuf.angle += tempAngle;
-            logMove(movBuf);
+            robot.logMove(movBuf);
             //reset encoder values
             curLTicks = lEncode;
             curRTicks = rEncode;
@@ -762,7 +702,7 @@ bool aroundWall(void) {
 //determines where a wall is, if there is a wall
 uint8_t wallTest() {
     robotDrive.botStop();
-    readAllUS();
+    robot.readAllUS();
 
     if ((USVals[2] < 13) && (USVals[2] > 0)) { //if a wall in front
         if ((USVals[0] > USVals[1]) && (USVals[1] > 0)) { //if a left wall is nearer than a right wall
@@ -979,7 +919,7 @@ bool candleFind(void) {
             LCD.setCursor(0,0);
             LCD.print("FIND");
 
-            candleState = candleTest();
+            candleState = robot.candleTest();
             break;
 
         case CANDLE_NOT_FOUND:
@@ -992,14 +932,14 @@ bool candleFind(void) {
                 robotDrive.botStop();
 
             }
-            candleState = candleTest();
+            candleState = robot.candleTest();
             break;
 
         case CANDLE_FOUND:
             LCD.setCursor(0,0);
             LCD.print("Found");
             if (rotato(6)) {
-                readAllUS();
+                robot.readAllUS();
                 LCD.setCursor(0,1);
                 LCD.print(USVals[2]);
                 if ((USVals[2] > 0) && (USVals[2] < 17)) {
@@ -1041,7 +981,7 @@ bool candleFind(void) {
         case FIRE_EXTINGUISHED:
             robotDrive.botStop();
             if (!drawn) {
-                logMove(movBuf);
+                robot.logMove(movBuf);
                 for (int i = 0; i < ARRAY_LENGTH; i++) {
                     calcDist(movements[i]);
                 }
@@ -1059,25 +999,6 @@ bool candleFind(void) {
     }
     return false;
 }
-
-
-//sweeps back and forth to search for the candle
-uint8_t candleTest(void) {
-
-    if (fireExtinguisher.readFlameSense() < 600) {
-        robotDrive.botStop();
-        return CANDLE_FOUND;
-    }
-
-    if (!fireExtinguisher.readFlameSenseDig()) {
-        robotDrive.botStop();
-        return CANDLE_FOUND;
-    }
-
-    return CANDLE_NOT_FOUND;
-
-}
-
 
 /*************************************************************************************************************************/
 //initializes the gyro
@@ -1122,7 +1043,7 @@ bool mazeSearch(void) {
             robotDrive.botStop();
             LCD.setCursor(0,0);
             LCD.print("TESTING");
-            mazeState = mazeWallTest();
+            mazeState = robot.mazeWallTest();
             break;
 
         case WALL_AVOID:
@@ -1141,7 +1062,7 @@ bool mazeSearch(void) {
                 mazeState = FIRE_DETECTED;
             } else {
                 if (sweep()) {
-                    mazeState = mazeWallTest();
+                    mazeState = robot.mazeWallTest();
                 }
             }
             break;
@@ -1149,7 +1070,7 @@ bool mazeSearch(void) {
         case STEP_FORWARD:
             LCD.setCursor(0,0);
             LCD.print("Forward");
-            mazeState = mazeWallTest();
+            mazeState = robot.mazeWallTest();
             if (rotato(12)) {
                 mazeState = MAZE_TEST;
             }
@@ -1164,19 +1085,3 @@ bool mazeSearch(void) {
     return false;
 }
 
-
-//returns the state to go to for maze searching
-uint8_t mazeWallTest(void) {
-    fireExtinguisher.servoTilt(60);
-    readAllUS();
-    if (((USVals[2] > 0) && (USVals[2] < 25)) ||
-            ((USVals[0] > 0) && (USVals[0] < 25)) ||
-            ((USVals[1] > 0) && (USVals[1] < 25))) { //if there is a wall near
-                return WALL_AVOID;
-    }
-    if (mazeState == MAZE_TEST) {
-        return SCAN_FOR_FIRE;
-    } else if (mazeState == STEP_FORWARD) {
-        return STEP_FORWARD;
-    }
-}
