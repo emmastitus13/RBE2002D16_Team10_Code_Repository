@@ -89,3 +89,54 @@ void Robot::candleZ(void) {
     float angle = fireExtinguisher.servoPosToAngle() * PI / 180;
     zPos = ((USVals[2] + 5) * 2 / 3 * tan(angle)) + 19;
 }
+
+
+//navigates through the maze
+bool mazeSearch(void) {
+    switch (mazeState) {
+        case MAZE_TEST:
+            robotDrive.botStop();
+            LCD.setCursor(0,0);
+            LCD.print("TESTING");
+            mazeState = mazeWallTest();
+            break;
+
+        case WALL_AVOID:
+            LCD.setCursor(0,0);
+            LCD.print("Get out");
+            if (wallNav()) {
+                mazeState = MAZE_TEST;
+            }
+            break;
+
+        case SCAN_FOR_FIRE:
+            LCD.setCursor(0,0);
+            LCD.print("Scanning");
+            if (!fireExtinguisher.readFlameSenseDig()) {
+                robotDrive.botStop();
+                mazeState = FIRE_DETECTED;
+            } else {
+                if (sweep()) {
+                    mazeState = mazeWallTest();
+                }
+            }
+            break;
+
+        case STEP_FORWARD:
+            LCD.setCursor(0,0);
+            LCD.print("Forward");
+            mazeState = mazeWallTest();
+            if (rotato(12)) {
+                mazeState = MAZE_TEST;
+            }
+
+        case FIRE_DETECTED:
+            robotDrive.botStop();
+            LCD.setCursor(0,0);
+            LCD.print("Fire detected");
+            return true;
+            break;
+    }
+    return false;
+}
+

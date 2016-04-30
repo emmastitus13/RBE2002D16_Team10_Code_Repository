@@ -39,8 +39,6 @@ bool turnLeft90(void);
 bool turnRight90(void);
 bool turn5DegLeft(void);
 bool turn5DegRight(void);
-bool turnSlightLeft(void);
-bool turnSlightRight(void);
 void driveStraight(void);
 bool sweep(void);
 
@@ -56,8 +54,6 @@ bool candleFind(void);
 uint8_t candleTestHigh(void);
 void candleSlowSweep(void);
 void candleSlightSweep(void);
-
-bool mazeSearch(void);
 
 bool gyroSetup(L3G gyro);
 void gyroRead(L3G gyro);
@@ -75,6 +71,7 @@ LiquidCrystal LCD(RS_PIN, EN_PIN, DB1_PIN, DB2_PIN, DB3_PIN, DB4_PIN);
 DebugLED orange(ORANGE_LED_PIN);
 DebugLED blue(BLUE_LED_PIN);
 L3G gyro;
+Turn turn(robotDrive);
 Robot robot(LCD, fireExtinguisher, robotDrive);
 
 //test turns on Serial and debugLEDs
@@ -274,7 +271,7 @@ void findAndExtinguishCandle(void) {
             break;
 
         case NAVIGATE_MAZE:
-            if (mazeSearch()) {
+            if (robot.mazeSearch()) {
                 botState = FIND_CANDLE;
             }
             break;
@@ -587,45 +584,6 @@ bool turn5DegRight(uint8_t deg5) {
             return false;
     }
 }
-
-
-//turns the robot 90 degrees to the left
-bool turnSlightLeft(void) {
-    tickRDiff = (rEncode - curRTicks);
-    tickLDiff = (lEncode - curLTicks);
-
-    if ((tickRDiff < tickPer90) || (tickLDiff < tickPer90)) {
-        robotDrive.botDrive(50, -50);
-        return false;
-    }
-    robotDrive.botStop();
-    //reset encoder values
-    curLTicks = lEncode;
-    curRTicks = rEncode;
-    tickLDiff = 0;
-    tickRDiff = 0;
-    return true;
-}
-
-
-//turns the robot 90 degrees to the right
-bool turnSlightRight(void) {
-    tickRDiff = (rEncode - curRTicks);
-    tickLDiff = (lEncode - curLTicks);
-
-    if ((tickRDiff < tickPer90) || (tickLDiff < tickPer90)) {
-        robotDrive.botDrive(-50, 50);
-        return false;
-    }
-    robotDrive.botStop();
-    //reset encoder values
-    curLTicks = lEncode;
-    curRTicks = rEncode;
-    tickLDiff = 0;
-    tickRDiff = 0;
-    return true;
-}
-
 
 //rotates the robot to scan for the candle flame
 bool sweep(void) {
@@ -1034,54 +992,4 @@ void gyroRead(L3G gyro) {
     }
 }
 
-
-/*************************************************************************************************************************/
-//navigates through the maze
-bool mazeSearch(void) {
-    switch (mazeState) {
-        case MAZE_TEST:
-            robotDrive.botStop();
-            LCD.setCursor(0,0);
-            LCD.print("TESTING");
-            mazeState = robot.mazeWallTest();
-            break;
-
-        case WALL_AVOID:
-            LCD.setCursor(0,0);
-            LCD.print("Get out");
-            if (wallNav()) {
-                mazeState = MAZE_TEST;
-            }
-            break;
-
-        case SCAN_FOR_FIRE:
-            LCD.setCursor(0,0);
-            LCD.print("Scanning");
-            if (!fireExtinguisher.readFlameSenseDig()) {
-                robotDrive.botStop();
-                mazeState = FIRE_DETECTED;
-            } else {
-                if (sweep()) {
-                    mazeState = robot.mazeWallTest();
-                }
-            }
-            break;
-
-        case STEP_FORWARD:
-            LCD.setCursor(0,0);
-            LCD.print("Forward");
-            mazeState = robot.mazeWallTest();
-            if (rotato(12)) {
-                mazeState = MAZE_TEST;
-            }
-
-        case FIRE_DETECTED:
-            robotDrive.botStop();
-            LCD.setCursor(0,0);
-            LCD.print("Fire detected");
-            return true;
-            break;
-    }
-    return false;
-}
 

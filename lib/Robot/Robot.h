@@ -10,6 +10,7 @@ extern uint8_t globi;
 extern unsigned long USVals[3];
 extern uint8_t mazeState;
 extern flaot zPos;
+extern volatile uint8_t botState;
 
 class Robot{
   public:
@@ -20,6 +21,7 @@ class Robot{
     void printAllUS(void) ; //check
     void candleZ(void); //check
     uint8_t candleTest(void);
+    bool mazeSearch(void) ;
 
   private:
   	LiquidCrystal& LCD;
