@@ -42,4 +42,3 @@ bool Turn::turnSlightRight(void) {
     tickRDiff = 0;
     return true;
 }
-

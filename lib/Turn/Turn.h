@@ -1,12 +1,16 @@
 #ifndef TURN_H
 #define TURN_H
 
-extern curRTicks;
-extern curLTicks;
-extern tickRDiff;
-extern tickLDiff;
-extern lEncode;
-extern rEncode;
+#include "DriveTrain.h"
+#include "definitions.h"
+
+extern unsigned long curRTicks;
+extern unsigned long curLTicks;
+extern unsigned int tickRDiff;
+extern unsigned int tickLDiff;
+extern volatile unsigned long lEncode;
+extern volatile unsigned long rEncode;
+extern const  int tickPer90;
 
 class Turn{
 	public:

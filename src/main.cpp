@@ -8,60 +8,45 @@
  * Created on Apr 12. 2016 by Ben Titus
  * Last edit made Apr 27, 2016 by Ben Titus
  */
-
 #include <Arduino.h>
 #include <Servo.h>
-#include <Wire.h>
 #include <Math.h>
 #include "TimerOne.h"
 #include "LiquidCrystal.h"
-#include "L3G.h"
-
-#include "definitions.cpp"
+#include "Gyro.h"
+#include "definitions.h"
 #include "Robot.h"
+#include "Turn.h"
 #include "DriveTrain.h"
 #include "FireExtinguisher.h"
 #include "hBridgeMotorDriver.h"
 #include "NewPing.h"
 #include "DebugLED.h"
 
-
 //funciton prototypes
 void findAndExtinguishCandle(void);
-
 void lEncoderISR(void);
 void rEncoderISR(void);
 void timer1ISR(void);
 void frontBumpISR(void);
 
-bool rotato(uint8_t eighths);
 bool turnLeft90(void);
 bool turnRight90(void);
-bool turn5DegLeft(void);
-bool turn5DegRight(void);
-void driveStraight(void);
-bool sweep(void);
 
 unsigned long readUS(NewPing us);
-void readAllUS(void);
 
-uint8_t wallTest(void);
-bool wallNav(void);
-bool aroundWall(void);
-bool wallSweep(bool dir);
 
 bool candleFind(void);
 uint8_t candleTestHigh(void);
 void candleSlowSweep(void);
 void candleSlightSweep(void);
 
-bool gyroSetup(L3G gyro);
-void gyroRead(L3G gyro);
 
 
 
 
 //object declarations
+Gyro gyro;
 NewPing leftUS(LEFT_US_TP, LEFT_US_EP, MAX_DISTANCE);
 NewPing rightUS(RIGHT_US_TP, RIGHT_US_EP, MAX_DISTANCE);
 NewPing frontUS(FORWARD_US_TP, FORWARD_US_EP, MAX_DISTANCE);
@@ -70,9 +55,23 @@ FireExtinguisher fireExtinguisher(FAN_PIN, FLAME_SENSE_PINA, FLAME_SENSE_PIND, T
 LiquidCrystal LCD(RS_PIN, EN_PIN, DB1_PIN, DB2_PIN, DB3_PIN, DB4_PIN);
 DebugLED orange(ORANGE_LED_PIN);
 DebugLED blue(BLUE_LED_PIN);
-L3G gyro;
 Turn turn(robotDrive);
-Robot robot(LCD, fireExtinguisher, robotDrive);
+Robot robot(LCD, fireExtinguisher, robotDrive, leftUS, rightUS,frontUS,orange,blue,gyro);
+
+
+//Values from the robot for calculating various things
+const int wheelRad = 16; //mm
+const int wheelDiam = 32; //mm
+const float wheelCirc = 100.53; //mm
+const float track = 119.25;
+const int ticksPerShaftRev = 6;
+const int fullEncTicksPerWheelRev = 3575;
+const int encTicksPerWheelRev = 1788;
+const unsigned int encTicksPerSixthWheelRev = 298;
+const int tickPer5Deg = 87;
+const int tickPer90 = 1577;
+
+
 
 //test turns on Serial and debugLEDs
 bool test = true;
@@ -330,63 +329,6 @@ unsigned long readUS(NewPing us) {
     return us.ping_cm();
 }
 
-
-/*************************************************************************************************************************/
-//drives the robot straight according to the encoders
-void driveStraight() {
-    robotDrive.botDrive(driveL, driveR);
-    if ((timer1cnt % 50) == 1) {
-        int diffL = lEncode - pastlEnc;
-        int diffR = rEncode - pastrEnc;
-        if (diffL - diffR > 0) {
-            driveL--;
-        }
-        if (diffR - diffL > 0) {
-            driveR--;
-        }
-        pastrEnc = rEncode;
-        pastlEnc = lEncode;
-        //if one side is too slow
-        if (driveL < (baseDrive - 30)) {
-            if (driveL > 30) {
-                driveL = baseDrive - 15;
-            } else {
-                driveL = baseDrive;
-            }
-        }
-        if (driveR < (baseDrive - 30)) {
-            if (driveR > 30) {
-                driveR = baseDrive - 15;
-            } else {
-                driveR = baseDrive;
-            }
-        }
-    }
-}
-
-
-//moves the robot forward one wheel rotation
-bool rotato(uint8_t sixths) {
-
-    tickRDiff = (rEncode - curRTicks);
-    tickLDiff = (lEncode - curLTicks);
-
-    if((tickLDiff <= (encTicksPerSixthWheelRev*sixths)) || (tickRDiff <= (encTicksPerSixthWheelRev*sixths))){
-        driveStraight();
-        return false;
-    } else {
-        robotDrive.botStop();
-        movBuf.encTicks += min(lEncode, rEncode);
-        //reset encoder values
-        curLTicks = lEncode;
-        curRTicks = rEncode;
-        tickLDiff = 0;
-        tickRDiff = 0;
-        return true;
-    }
-}
-
-
 //turns the robot 90 degrees to the left
 bool turnLeft90(void) {
     switch (turnState) {
@@ -410,7 +352,7 @@ bool turnLeft90(void) {
             break;
 
         case IMU_TURN:
-        gyroRead(gyro);
+        gyro.gyroRead();
             if (gyro_z < IMU_TURN_90_LEFT) {
                 robotDrive.botDrive(153, -153);
                 return false;
@@ -450,7 +392,7 @@ bool turnRight90(void) {
             }
             robotDrive.botStop();
             movBuf.angle -= 90;
-            Robot.logMove(movBuf);
+            robot.logMove(movBuf);
             //reset encoder values
             curLTicks = lEncode;
             curRTicks = rEncode;
@@ -460,7 +402,7 @@ bool turnRight90(void) {
             break;
 
         case IMU_TURN:
-            gyroRead(gyro);
+            gyro.gyroRead();
             if (gyro_z > IMU_TURN_90_RIGHT) {
                 robotDrive.botDrive(-153, 153);
                 return false;
@@ -487,386 +429,6 @@ bool turnRight90(void) {
 }
 
 
-//turns the robot 90 degrees to the left
-bool turn5DegLeft(uint8_t deg5) {
-    switch (turnState) {
-        case ENCODER_TURN:
-            tickRDiff = (rEncode - curRTicks);
-            tickLDiff = (lEncode - curLTicks);
-
-            if ((tickRDiff < (tickPer5Deg*deg5)) || (tickLDiff < (tickPer5Deg*deg5))) {
-                robotDrive.botDrive(100, -100);
-                return false;
-            }
-            robotDrive.botStop();
-            movBuf.angle += tempAngle;
-            robot.logMove(movBuf);
-            //reset encoder values
-            curLTicks = lEncode;
-            curRTicks = rEncode;
-            tickLDiff = 0;
-            tickRDiff = 0;
-            return true;
-            break;
-
-        case IMU_TURN:
-        gyroRead(gyro);
-            if (gyro_z < (IMU_TURN_5_LEFT * deg5)) {
-                robotDrive.botDrive(100, -100);
-                tempAngle = tempAngle * gyro_z / (IMU_TURN_5_LEFT * deg5);
-                return false;
-            }
-            robotDrive.botStop();
-            movBuf.angle += tempAngle;
-            robot.logMove(movBuf);
-            //reset the gyro
-            curLTicks = lEncode;
-            curRTicks = rEncode;
-            tickLDiff = 0;
-            tickRDiff = 0;
-            gyroGood = false;
-            gyro_z = 0;
-            gyro_zold = 0;
-            return true;
-            break;
-
-        default:
-            return false;
-    }
-}
-
-
-//turns the robot 90 degrees to the right
-bool turn5DegRight(uint8_t deg5) {
-    switch (turnState) {
-        case ENCODER_TURN:
-            tickRDiff = (rEncode - curRTicks);
-            tickLDiff = (lEncode - curLTicks);
-
-            if ((tickRDiff < (tickPer5Deg*deg5)) || (tickLDiff < (tickPer5Deg*deg5))) {
-                robotDrive.botDrive(-100, 100);
-                tempAngle = tempAngle * gyro_z / (IMU_TURN_5_LEFT * deg5);
-                return false;
-            }
-            robotDrive.botStop();
-            movBuf.angle += tempAngle;
-            robot.logMove(movBuf);
-            //reset encoder values
-            curLTicks = lEncode;
-            curRTicks = rEncode;
-            tickLDiff = 0;
-            tickRDiff = 0;
-            return true;
-            break;
-
-        case IMU_TURN:
-            gyroRead(gyro);
-            if (gyro_z > (IMU_TURN_5_RIGHT * deg5)) {
-                robotDrive.botDrive(-100, 100);
-                return false;
-            }
-            robotDrive.botStop();
-            movBuf.angle += tempAngle;
-            robot.logMove(movBuf);
-            //reset encoder values
-            curLTicks = lEncode;
-            curRTicks = rEncode;
-            tickLDiff = 0;
-            tickRDiff = 0;
-            //reset the gyro
-            gyroGood = false;
-            gyro_z = 0;
-            gyro_zold = 0;
-            return true;
-            break;
-
-        default:
-            return false;
-    }
-}
-
-//rotates the robot to scan for the candle flame
-bool sweep(void) {
-    uint8_t mod4 = sweepState % 4;
-    switch(mod4) {
-        case 0:
-            if (turn5DegRight(12)) {
-                sweepState++;
-                delay(50);
-            }
-            break;
-
-        case 1:
-            if (turn5DegLeft(12)) {
-                sweepState++;
-                delay(50);
-            }
-            break;
-
-        case 2:
-            if (turn5DegLeft(12)) {
-                sweepState++;
-                delay(50);
-            }
-            break;
-
-        case 3:
-            if (turn5DegRight(12)) {
-                blue.debugLEDON();
-                delay(50);
-                sweepState = 0;
-                return true;
-            }
-            break;
-    }
-    return false;
-}
-
-
-//goes around a wall. Used in wallNav function
-bool aroundWall(void) {
-    switch (aroundState) {
-        case LEAVE_WALL:
-            if (rotato(6)) {
-                aroundState = TURN_AROUND_WALL;
-            }
-            break;
-
-        case TURN_AROUND_WALL:
-            tempAngle = 90;
-            if (lastWall) {
-                if (turn5DegLeft(18)) {
-                    aroundState = CATCH_WALL;
-                }
-            } else {
-                if (turn5DegRight(18)) {
-                    aroundState = CATCH_WALL;
-                }
-            }
-            break;
-
-        case CATCH_WALL:
-            if (rotato(27)) {
-                aroundState = LEAVE_WALL;
-                return true;
-            }
-            break;
-    }
-    return false;
-}
-
-
-/*************************************************************************************************************************/
-//determines where a wall is, if there is a wall
-uint8_t wallTest() {
-    robotDrive.botStop();
-    robot.readAllUS();
-
-    if ((USVals[2] < 13) && (USVals[2] > 0)) { //if a wall in front
-        if ((USVals[0] > USVals[1]) && (USVals[1] > 0)) { //if a left wall is nearer than a right wall
-                return TURN_RIGHT;
-        } else { //if a right wall is nearer than a left wall or no wall is nearer
-                return TURN_LEFT;
-        }
-    }
-
-    if ((USVals[0] <= 10) && (USVals[0] > 0)) { //if a left wall is near
-        lastWall = false;
-        return WALL_LEFT;
-    }
-
-    if ((USVals[1] <= 10) && (USVals[1] > 0)) { //if a right wall is near
-        lastWall = true;
-        return WALL_RIGHT;
-    }
-
-    if (USVals[0] <= 20) {
-        if (USVals[0] > 13) { //if a left wall is near
-            return NO_WALLS_LEFT;
-        }
-        return FORWARD;
-    }
-
-    if (USVals[1] <= 20) {
-        if (USVals[1] > 13) { //if a right wall is near
-            return NO_WALLS_RIGHT;
-        }
-        return FORWARD;
-    }
-
-
-    if ((USVals[0] > 30) && (USVals[1] > 30) && (USVals[2] > 30)) {
-        return NO_WALLS;
-    }
-
-    return WALL_TEST;
-}
-
-
-//wall following function
-bool wallNav() {
-    switch(wallState) {
-        case WALL_TEST:
-            blue.debugLEDOFF();
-            orange.debugLEDOFF();
-            robotDrive.botStop();
-            wallState = wallTest();
-            break;
-
-        case TURN_LEFT:
-            tempAngle = 90;
-            if (turn5DegRight(18)) {
-                wallState = WALL_TEST;
-            }
-            break;
-
-        case TURN_RIGHT:
-            tempAngle = 90;
-            if (turn5DegLeft(18)) {
-                wallState = WALL_TEST;
-            }
-            break;
-
-        case WALL_RIGHT:
-            orange.debugLEDON();
-            if (driveR <= driveL) {
-                driveL = driveR - 9;
-            } else {
-                driveL = driveR;
-            }
-            wallState = FORWARD;
-            break;
-
-        case WALL_LEFT:
-            blue.debugLEDON();
-            if (driveL <= driveR) {
-                driveR = driveL - 9;
-            } else {
-                driveR = driveL;
-            }
-            wallState = FORWARD;
-            break;
-
-        case FORWARD:
-            if (rotato(9)) {
-                wallState = WALL_TEST;
-                if (wallCount >= 5) {
-                    wallState = WALL_SCAN;
-                }
-                wallCount++;
-            }
-            break;
-
-        case WALL_SCAN:
-            wallCount = 0;
-            if (wallSweep(USVals[0] < USVals[1])) {
-                wallState = WALL_TEST;
-            }
-            if (!fireExtinguisher.readFlameSenseDig()) {
-                return true;
-            }
-            break;
-
-        case NO_WALLS:
-            if (aroundWall()) {
-                wallState = WALL_TEST;
-            }
-            break;
-
-        case NO_WALLS_RIGHT:
-            if (driveL < driveR) {
-                driveL = driveR - 9;
-            } else {
-                driveL = baseDrive;
-                driveR = driveL + 9;
-            }
-            wallState = FORWARD;
-            break;
-
-        case NO_WALLS_LEFT:
-            if (driveR < driveL) {
-                driveR = driveL - 9;
-            } else {
-                driveR = baseDrive;
-                driveL = driveR + 9;
-            }
-            wallState = FORWARD;
-            break;
-
-        default:
-            Serial.println("Conrgrats");
-            wallState = WALL_TEST;
-            break;
-    }
-    return false;
-}
-
-
-//sweeps ~175 degrees back then forward
-bool wallSweep(bool dir) {
-    if (dir) {
-        switch (wallSweepState) {
-            case SWEEP_FORWARDS:
-                tempAngle = 180;
-                if (turn5DegLeft(36)) {
-                    wallSweepState = SWEEP_BACKWARDS;
-                    //reset encoder values
-                    curLTicks = lEncode;
-                    curRTicks = rEncode;
-                    tickLDiff = 0;
-                    tickRDiff = 0;
-                    rotato(1);
-                }
-                break;
-
-            case SWEEP_BACKWARDS:
-                tempAngle = 180;
-                if (turn5DegRight(36)) {
-                    wallSweepState = SWEEP_FORWARDS;
-                    orange.debugLEDON();
-                    //reset encoder values
-                    curLTicks = lEncode;
-                    curRTicks = rEncode;
-                    tickLDiff = 0;
-                    tickRDiff = 0;
-                    return true;
-                }
-                break;
-        }
-    } else {
-        switch (wallSweepState) {
-            case SWEEP_FORWARDS:
-                tempAngle = 180;
-                if (turn5DegRight(36)) {
-                    wallSweepState = SWEEP_BACKWARDS;
-                    //reset encoder values
-                    curLTicks = lEncode;
-                    curRTicks = rEncode;
-                    tickLDiff = 0;
-                    tickRDiff = 0;
-                    rotato(1);
-                }
-                break;
-
-            case SWEEP_BACKWARDS:
-                tempAngle = 180;
-                if (turn5DegLeft(36)) {
-                    wallSweepState = SWEEP_FORWARDS;
-                    orange.debugLEDON();
-                    //reset encoder values
-                    curLTicks = lEncode;
-                    curRTicks = rEncode;
-                    tickLDiff = 0;
-                    tickRDiff = 0;
-                    return true;
-                }
-                break;
-        }
-    }
-    return false;
-}
-
-
 /*************************************************************************************************************************/
 //sweeps back and forth to find the candle
 bool candleFind(void) {
@@ -885,7 +447,7 @@ bool candleFind(void) {
             LCD.print("No find");
 
             tempAngle = 360;
-            turn5DegRight(130);
+            robot.turn5DegRight(130);
             if (!fireExtinguisher.readFlameSenseDig()) {
                 robotDrive.botStop();
 
@@ -896,7 +458,7 @@ bool candleFind(void) {
         case CANDLE_FOUND:
             LCD.setCursor(0,0);
             LCD.print("Found");
-            if (rotato(6)) {
+            if (robot.rotato(6)) {
                 robot.readAllUS();
                 LCD.setCursor(0,1);
                 LCD.print(USVals[2]);
@@ -957,39 +519,3 @@ bool candleFind(void) {
     }
     return false;
 }
-
-/*************************************************************************************************************************/
-//initializes the gyro
-bool gyroSetup(L3G gyro) {
-    delay(50);
-    gyro.enableDefault(); // gyro init. default 250/deg/s
-    delay(700);// allow time for gyro to settle
-    for(int i =0;i<100;i++){  // takes 100 samples of the gyro
-        gyro.read();
-        gerrz+=gyro.g.z;
-        delay(25);
-    }
-    gerrz = gerrz/100;
-    return true;
-}
-
-
-//reads the value of the gyro
-void gyroRead(L3G gyro) {
-    Wire.begin();
-    gyro.init();
-    if (!gyroGood) {
-        gyroGood = gyroSetup(gyro);
-    }
-    if(timer % 5) { // reads imu every 5ms
-        gyro.read(); // read gyro
-        gyro_z=(float)(gyro.g.z-gerrz)*G_gain;
-        gyro_z = gyro_z*G_Dt;
-        if (abs(gyro_z - gyro_zold) > minErr) {
-            gyro_z +=gyro_zold;
-        }
-        gyro_zold=gyro_z ;
-    }
-}
-
-

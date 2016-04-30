@@ -10,28 +10,8 @@
  */
 
 #include <Arduino.h>
-
-
 //movement struct
 //holds the number of encoder ticks and the angle
-typedef struct {
-    uint8_t index;
-    int encTicks;
-    float angle;
-} Movement;
-
-
-//Values from the robot for calculating various things
-const int wheelRad = 16; //mm
-const int wheelDiam = 32; //mm
-const float wheelCirc = 100.53; //mm
-const float track = 119.25;
-const int ticksPerShaftRev = 6;
-const int fullEncTicksPerWheelRev = 3575;
-const int encTicksPerWheelRev = 1788;
-const unsigned int encTicksPerSixthWheelRev = 298;
-const int tickPer5Deg = 87;
-const int tickPer90 = 1577;
 
 
 //defining demo states
