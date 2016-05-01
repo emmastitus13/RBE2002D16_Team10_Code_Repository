@@ -23,6 +23,8 @@ extern const int tickPer5Deg;
 extern uint8_t globi;
 extern unsigned long USVals[3];
 extern uint8_t mazeState;
+extern float xPos; //x position of the candle
+extern float yPos; //y position of the candle
 extern float zPos;
 extern volatile uint8_t botState;
 extern unsigned long curRTicks;
@@ -44,22 +46,31 @@ extern uint8_t slightSweepState;
 extern uint8_t wallSweepState;
 extern uint8_t turnState;
 extern float tempAngle;
+extern float angAttempt;
 extern Movement movements[ARRAY_LENGTH];
 extern uint8_t wallState;
 extern uint8_t wallCount;
-extern bool lastWall;;
+extern bool lastWall;
 extern uint8_t aroundState;
+extern Movement movements[ARRAY_LENGTH];
+extern float xMov[ARRAY_LENGTH], yMov[ARRAY_LENGTH];
+extern int flameVals[90];
+extern uint8_t candleState;
+extern int tempServoMin, servoMaximum, servoMinimum, servoPosition, servoIndex;
+extern bool drawn;
+
 
 class Robot{
   public:
     Robot(LiquidCrystal& lcd, FireExtinguisher& fr, DriveTrain& rb, NewPing& lus, NewPing& rus, NewPing& fus, DebugLED& orange, DebugLED& blue, Gyro& gyro);
-    void updatePosition(int newX, int newY, int newZ); //check
+    void updatePosition(float newX, float newY, float newZ); //check
+    void updateFlameState(uint8_t state); //check
     void readAllUS(void); //check
     void printAllUS(void) ; //check
     void candleZ(void); //check
     uint8_t candleTest(void);
     uint8_t mazeWallTest(void);
-    bool mazeSearch(void) ;;
+    bool mazeSearch(void);
     bool rotato(uint8_t sixths);
     void driveStraight();
     bool sweep();
@@ -70,6 +81,8 @@ class Robot{
     bool wallSweep(bool dir);
     uint8_t wallTest();
     bool aroundWall();
+    void calcDist(Movement mov);
+    bool candleFind(void);
 
   private:
   	LiquidCrystal& LCD;

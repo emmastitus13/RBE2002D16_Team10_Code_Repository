@@ -10,8 +10,18 @@
  */
 
 #include <Arduino.h>
-//movement struct
-//holds the number of encoder ticks and the angle
+
+
+//Values from the robot for calculating various things
+#define WHEEL_RAD 16 //mm
+#define WHEEL_DIAM 32 //mm
+#define WHEEL_CIRC 100.53 //mm
+#define TRACK 119.25
+#define TICK_PER_SHAFT_REV 6
+#define TICK_PER_WHEEL_REV 1788
+#define TICK_PER_SIXTH_WHEEL_REV 298
+#define TICK_PER_5_DEG 87
+#define TICK_PER_90_DEG 1577
 
 
 //defining demo states
@@ -53,7 +63,8 @@
 #define NO_WALLS 6               //no walls near the fron, back, or left of the robot
 #define NO_WALLS_LEFT 7           //
 #define NO_WALLS_RIGHT 8         //
-#define WALL_SCAN 9
+#define WALL_SCAN_RIGHT 9
+#define WALL_SCAN_LEFT 10
 
 
 //defining wall sweep states

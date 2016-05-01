@@ -59,19 +59,6 @@ Turn turn(robotDrive);
 Robot robot(LCD, fireExtinguisher, robotDrive, leftUS, rightUS,frontUS,orange,blue,gyro);
 
 
-//Values from the robot for calculating various things
-const int wheelRad = 16; //mm
-const int wheelDiam = 32; //mm
-const float wheelCirc = 100.53; //mm
-const float track = 119.25;
-const int ticksPerShaftRev = 6;
-const int fullEncTicksPerWheelRev = 3575;
-const int encTicksPerWheelRev = 1788;
-const unsigned int encTicksPerSixthWheelRev = 298;
-const int tickPer5Deg = 87;
-const int tickPer90 = 1577;
-
-
 
 //test turns on Serial and debugLEDs
 bool test = true;
@@ -125,9 +112,9 @@ unsigned long lUSVal, rUSVal, frUSVal;
 
 //driving variables
 volatile bool frBumpPush = false;
-uint8_t baseDrive = 255;
+uint8_t baseDrive = 220;
 uint8_t driveL = baseDrive;
-uint8_t driveR = baseDrive - 2;
+uint8_t driveR = baseDrive - 3;
 bool lastWall;
 
 //movement variables
@@ -172,7 +159,7 @@ void setup() {
     orange.debugLEDOFF();
 
     LCD.begin(16,2);
-    LCD.setCursor(0,0);
+    LCD.setCursor(0,1);
     LCD.print("LOADING");
 
     if (test) {
@@ -207,21 +194,12 @@ void setup() {
 
     robotDrive.botStop();
     fireExtinguisher.fanOff();
-    LCD.clear();
     go = true;
 }
 
 /*************************************************************************************************************************/
 void loop() {
-    switch (demoState) {
-        case FULL_DEMO:
-            findAndExtinguishCandle();
-            break;
-
-        case FIND_CANDLE_DEMO:
-            candleFind();
-            break;
-    }
+    findAndExtinguishCandle();
  }
 
 
@@ -276,7 +254,7 @@ void findAndExtinguishCandle(void) {
             break;
 
         case FIND_CANDLE:
-            if (candleFind()) {
+            if (robot.candleFind()) {
                 botState = CALCULATE_VALUES;
             }
             break;
@@ -289,35 +267,6 @@ void findAndExtinguishCandle(void) {
         case RETURN_HOME:
             break;
     }
-}
-
-//calculates the position of the candle then stores it in xPos, yPos, and zPos
-//this function will be called after extinguishing the candle
-void calcDist(Movement mov) {
-    xPos = 0;
-    yPos = 0;
-
-    float mag = 0.0;
-    Movement prevMov;
-    if (mov.index == 0) {
-        prevMov.encTicks = 0;
-    } else {
-        prevMov = movements[mov.index-1];
-    }
-    mag = (((mov.encTicks - prevMov.encTicks) / encTicksPerWheelRev) * wheelCirc) / 10.0;
-    xMov[mov.index] = mag * cos(mov.angle);
-    yMov[mov.index] = mag * sin(mov.angle);
-
-    xPos += xMov[mov.index];
-    yPos += yMov[mov.index];
-
-    //use the servoPos to calculate the z position of the candle
-    robot.candleZ();
-
-    //convert to inches
-    xPos /= 2.54;
-    yPos /= 2.54;
-    zPos /= 2.54;
 }
 
 
@@ -430,92 +379,3 @@ bool turnRight90(void) {
 
 
 /*************************************************************************************************************************/
-//sweeps back and forth to find the candle
-bool candleFind(void) {
-
-    switch(candleState) {
-        case CANDLE_FIND:
-            fireExtinguisher.servoTilt(60);
-            LCD.setCursor(0,0);
-            LCD.print("FIND");
-
-            candleState = robot.candleTest();
-            break;
-
-        case CANDLE_NOT_FOUND:
-            LCD.setCursor(0,0);
-            LCD.print("No find");
-
-            tempAngle = 360;
-            robot.turn5DegRight(130);
-            if (!fireExtinguisher.readFlameSenseDig()) {
-                robotDrive.botStop();
-
-            }
-            candleState = robot.candleTest();
-            break;
-
-        case CANDLE_FOUND:
-            LCD.setCursor(0,0);
-            LCD.print("Found");
-            if (robot.rotato(6)) {
-                robot.readAllUS();
-                LCD.setCursor(0,1);
-                LCD.print(USVals[2]);
-                if ((USVals[2] > 0) && (USVals[2] < 17)) {
-                    candleState = EXTINGUISH_CANDLE;
-                }
-            }
-            break;
-
-        case EXTINGUISH_CANDLE:
-            robotDrive.botStop();
-            for (int i = servoMinimum; i < servoMaximum; i++) {
-                fireExtinguisher.servoTilt(i);
-                delay(30);
-                flameVals[i - servoMinimum] = fireExtinguisher.readFlameSense();
-            }
-            tempServoMin = 1024;
-            for (int i = 0; i < 90; i++) {
-                if (flameVals[i] < tempServoMin) {
-                    tempServoMin = flameVals[i];
-                    servoIndex = i;
-                }
-            }
-            LCD.print(servoIndex);
-            fireExtinguisher.servoTilt(servoIndex + servoMinimum);
-            delay(100);
-            LCD.setCursor(0,0);
-            LCD.print("Extinguishing");
-            fireExtinguisher.extinguishFire();
-            if (fireExtinguisher.readFlameSense() > 980) {
-                candleState = FIRE_EXTINGUISHED;
-                if (fireExtinguisher.findFlame()) {
-                    candleState = EXTINGUISH_CANDLE;
-                }
-            } else {
-                robotDrive.botDrive(-25, 25);
-            }
-            break;
-
-        case FIRE_EXTINGUISHED:
-            robotDrive.botStop();
-            if (!drawn) {
-                robot.logMove(movBuf);
-                for (int i = 0; i < ARRAY_LENGTH; i++) {
-                    calcDist(movements[i]);
-                }
-                LCD.clear();
-                LCD.setCursor(0,0);
-                LCD.print("Flame out");
-                drawn = true;
-                return true;
-            }
-            break;
-
-        default:
-            candleState = CANDLE_FIND;
-            break;
-    }
-    return false;
-}
