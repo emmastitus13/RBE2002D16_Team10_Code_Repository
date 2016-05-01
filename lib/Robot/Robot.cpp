@@ -82,8 +82,10 @@ bool Robot::candleFind(void) {
             angAttempt = 360;
             turn5DegRight(80);
             if (!fireExtinguisher.readFlameSenseDig()) {
-				movBuf.angle = tempAngle;
+				//movBuf.angle -= tempAngle;
                 robotDrive.botStop();
+				LCD.setCursor(12,1);
+				LCD.print(tempAngle);
 	            //reset encoder values
 	            curLTicks = lEncode;
 	            curRTicks = rEncode;
@@ -132,8 +134,8 @@ bool Robot::candleFind(void) {
             fireExtinguisher.extinguishFire();
             if (fireExtinguisher.readFlameSense() > 980) {
 				candleZ();
-				movBuf.encTicks = 2 * TICK_PER_WHEEL_REV;
-				calcDist(movBuf);
+				// movBuf.encTicks = TICK_PER_WHEEL_REV;
+				// calcDist(movBuf);
                 candleState = FIRE_EXTINGUISHED;
                 if (fireExtinguisher.findFlame()) {
                     candleState = EXTINGUISH_CANDLE;
@@ -382,7 +384,7 @@ bool Robot::turn5DegRight(uint8_t deg5) {
                 return false;
             }
             robotDrive.botStop();
-            movBuf.angle += angAttempt;
+            movBuf.angle -= angAttempt;
             //reset encoder values
             curLTicks = lEncode;
             curRTicks = rEncode;
@@ -474,7 +476,11 @@ bool Robot::wallNav() {
                 wallState = TURN_RIGHT;
             }
             if (!fireExtinguisher.readFlameSenseDig()) {
-				movBuf.angle = tempAngle;
+				if (wallSweepState == SWEEP_FORWARDS) {
+					movBuf.angle += tempAngle;
+				} else {
+					movBuf.angle -= tempAngle;
+				}
                 robotDrive.botStop();
 	            //reset encoder values
 	            curLTicks = lEncode;
@@ -495,7 +501,11 @@ bool Robot::wallNav() {
                 wallState = TURN_LEFT;
             }
             if (!fireExtinguisher.readFlameSenseDig()) {
-				movBuf.angle = tempAngle;
+				if (wallSweepState == SWEEP_FORWARDS) {
+					movBuf.angle += tempAngle;
+				} else {
+					movBuf.angle -= tempAngle;
+				}
                 robotDrive.botStop();
 	            //reset encoder values
 	            curLTicks = lEncode;
